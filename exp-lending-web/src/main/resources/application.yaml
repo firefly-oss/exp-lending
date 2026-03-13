@@ -1,0 +1,81 @@
+spring:
+  application:
+    name: exp-lending
+  threads:
+    virtual:
+      enabled: true
+server:
+  port: ${SERVER_PORT:8102}
+  shutdown: graceful
+api-configuration:
+  domain-platform:
+    lending-loan-origination:
+      base-path: ${LOAN_ORIGINATION_URL:http://localhost:8082}
+  core-platform:
+    lending-loan-origination:
+      base-path: ${CORE_LOAN_ORIGINATION_URL:http://localhost:8081}
+    lending-loan-servicing:
+      base-path: ${LOAN_SERVICING_URL:http://localhost:8084}
+    lending-credit-scoring:
+      base-path: ${CREDIT_SCORING_URL:http://localhost:8042}
+    lending-asset-finance:
+      base-path: ${ASSET_FINANCE_URL:http://localhost:8043}
+    product-pricing:
+      base-path: ${PRODUCT_PRICING_URL:http://localhost:8086}
+    common-contracts:
+      base-path: ${CONTRACTS_URL:http://localhost:8090}
+    common-sca:
+      base-path: ${SCA_URL:http://localhost:8041}
+    common-notifications:
+      base-path: ${NOTIFICATIONS_URL:http://localhost:8095}
+springdoc:
+  packages-to-scan: com.firefly.experience.lending.web.controllers
+  paths-to-match: /api/**
+  swagger-ui:
+    path: /swagger-ui.html
+    tagsSorter: alpha
+    operationsSorter: method
+    docExpansion: none
+    filter: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+logging:
+  level:
+    root: INFO
+    com.firefly.experience.lending: DEBUG
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+logging:
+  level:
+    com.firefly: DEBUG
+
+---
+spring:
+  config:
+    activate:
+      on-profile: pro
+logging:
+  level:
+    com.firefly: INFO
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

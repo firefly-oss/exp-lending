@@ -11,9 +11,6 @@ api-configuration:
   domain-platform:
     lending-loan-origination:
       base-path: ${LOAN_ORIGINATION_URL:http://localhost:8082}
-  core-platform:
-    lending-loan-origination:
-      base-path: ${CORE_LOAN_ORIGINATION_URL:http://localhost:8081}
     lending-loan-servicing:
       base-path: ${LOAN_SERVICING_URL:http://localhost:8084}
     lending-credit-scoring:

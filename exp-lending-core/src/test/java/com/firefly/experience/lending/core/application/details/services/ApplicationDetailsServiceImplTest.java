@@ -1,17 +1,14 @@
 package com.firefly.experience.lending.core.application.details.services;
 
-import com.firefly.core.lending.origination.sdk.api.ApplicationConditionApi;
-import com.firefly.core.lending.origination.sdk.api.ApplicationFeeApi;
-import com.firefly.core.lending.origination.sdk.api.ApplicationTaskApi;
-import com.firefly.core.lending.origination.sdk.api.ApplicationVerificationApi;
-import com.firefly.core.lending.origination.sdk.model.ApplicationConditionDTO;
-import com.firefly.core.lending.origination.sdk.model.ApplicationFeeDTO;
-import com.firefly.core.lending.origination.sdk.model.ApplicationTaskDTO;
-import com.firefly.core.lending.origination.sdk.model.ApplicationVerificationDTO;
-import com.firefly.core.lending.origination.sdk.model.PaginationResponseApplicationConditionDTO;
-import com.firefly.core.lending.origination.sdk.model.PaginationResponseApplicationFeeDTO;
-import com.firefly.core.lending.origination.sdk.model.PaginationResponseApplicationTaskDTO;
-import com.firefly.core.lending.origination.sdk.model.PaginationResponseApplicationVerificationDTO;
+import com.firefly.domain.lending.loan.origination.sdk.api.LoanOriginationApi;
+import com.firefly.domain.lending.loan.origination.sdk.model.ApplicationConditionDTO;
+import com.firefly.domain.lending.loan.origination.sdk.model.ApplicationFeeDTO;
+import com.firefly.domain.lending.loan.origination.sdk.model.ApplicationTaskDTO;
+import com.firefly.domain.lending.loan.origination.sdk.model.ApplicationVerificationDTO;
+import com.firefly.domain.lending.loan.origination.sdk.model.PaginationResponseApplicationConditionDTO;
+import com.firefly.domain.lending.loan.origination.sdk.model.PaginationResponseApplicationFeeDTO;
+import com.firefly.domain.lending.loan.origination.sdk.model.PaginationResponseApplicationTaskDTO;
+import com.firefly.domain.lending.loan.origination.sdk.model.PaginationResponseApplicationVerificationDTO;
 import com.firefly.experience.lending.core.application.details.services.impl.ApplicationDetailsServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,16 +33,7 @@ import static org.mockito.Mockito.when;
 class ApplicationDetailsServiceImplTest {
 
     @Mock
-    private ApplicationConditionApi applicationConditionApi;
-
-    @Mock
-    private ApplicationFeeApi applicationFeeApi;
-
-    @Mock
-    private ApplicationTaskApi applicationTaskApi;
-
-    @Mock
-    private ApplicationVerificationApi applicationVerificationApi;
+    private LoanOriginationApi loanOriginationApi;
 
     @InjectMocks
     private ApplicationDetailsServiceImpl service;
@@ -60,7 +48,8 @@ class ApplicationDetailsServiceImplTest {
 
     @Test
     void getConditions_returnsMappedConditions() {
-        var sdkCondition = new ApplicationConditionDTO(CONDITION_ID)
+        var sdkCondition = new ApplicationConditionDTO()
+                .conditionId(CONDITION_ID)
                 .loanApplicationId(APPLICATION_ID)
                 .conditionType("INCOME_PROOF")
                 .description("Provide last 3 payslips")
@@ -68,8 +57,7 @@ class ApplicationDetailsServiceImplTest {
 
         var page = new PaginationResponseApplicationConditionDTO().content(List.of(sdkCondition));
 
-        when(applicationConditionApi.findAllConditions(
-                eq(APPLICATION_ID), isNull(), isNull(), isNull(), isNull(), isNull()))
+        when(loanOriginationApi.getApplicationConditions(eq(APPLICATION_ID), isNull()))
                 .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.getConditions(APPLICATION_ID))
@@ -86,8 +74,7 @@ class ApplicationDetailsServiceImplTest {
     void getConditions_returnsEmptyWhenPageContentIsNull() {
         var page = new PaginationResponseApplicationConditionDTO().content(null);
 
-        when(applicationConditionApi.findAllConditions(
-                eq(APPLICATION_ID), isNull(), isNull(), isNull(), isNull(), isNull()))
+        when(loanOriginationApi.getApplicationConditions(eq(APPLICATION_ID), isNull()))
                 .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.getConditions(APPLICATION_ID))
@@ -96,8 +83,7 @@ class ApplicationDetailsServiceImplTest {
 
     @Test
     void getConditions_propagatesUpstreamError() {
-        when(applicationConditionApi.findAllConditions(
-                eq(APPLICATION_ID), isNull(), isNull(), isNull(), isNull(), isNull()))
+        when(loanOriginationApi.getApplicationConditions(eq(APPLICATION_ID), isNull()))
                 .thenReturn(Mono.error(new RuntimeException("upstream error")));
 
         StepVerifier.create(service.getConditions(APPLICATION_ID))
@@ -110,17 +96,16 @@ class ApplicationDetailsServiceImplTest {
     @Test
     void getTasks_returnsMappedTasks() {
         var dueDate = LocalDateTime.of(2026, 4, 1, 12, 0);
-        var sdkTask = new ApplicationTaskDTO(TASK_ID)
+        var sdkTask = new ApplicationTaskDTO()
+                .taskId(TASK_ID)
                 .loanApplicationId(APPLICATION_ID)
-                .taskType("DOCUMENT_COLLECTION")
                 .taskStatus("PENDING")
                 .description("Collect income documents")
                 .dueDate(dueDate);
 
         var page = new PaginationResponseApplicationTaskDTO().content(List.of(sdkTask));
 
-        when(applicationTaskApi.findAllTasks(
-                eq(APPLICATION_ID), isNull(), isNull(), isNull(), isNull(), isNull()))
+        when(loanOriginationApi.getApplicationTasks(eq(APPLICATION_ID), isNull()))
                 .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.getTasks(APPLICATION_ID))
@@ -137,8 +122,7 @@ class ApplicationDetailsServiceImplTest {
     void getTasks_returnsEmptyWhenPageContentIsNull() {
         var page = new PaginationResponseApplicationTaskDTO().content(null);
 
-        when(applicationTaskApi.findAllTasks(
-                eq(APPLICATION_ID), isNull(), isNull(), isNull(), isNull(), isNull()))
+        when(loanOriginationApi.getApplicationTasks(eq(APPLICATION_ID), isNull()))
                 .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.getTasks(APPLICATION_ID))
@@ -147,8 +131,7 @@ class ApplicationDetailsServiceImplTest {
 
     @Test
     void getTasks_propagatesUpstreamError() {
-        when(applicationTaskApi.findAllTasks(
-                eq(APPLICATION_ID), isNull(), isNull(), isNull(), isNull(), isNull()))
+        when(loanOriginationApi.getApplicationTasks(eq(APPLICATION_ID), isNull()))
                 .thenReturn(Mono.error(new RuntimeException("tasks error")));
 
         StepVerifier.create(service.getTasks(APPLICATION_ID))
@@ -159,25 +142,17 @@ class ApplicationDetailsServiceImplTest {
     // --- completeTask ---
 
     @Test
-    void completeTask_fetchesThenUpdatesWithCompletedStatus() {
-        var existing = new ApplicationTaskDTO(TASK_ID)
+    void completeTask_returnsTaskWithCompletedStatus() {
+        var existing = new ApplicationTaskDTO()
+                .taskId(TASK_ID)
                 .loanApplicationId(APPLICATION_ID)
-                .taskType("DOCUMENT_COLLECTION")
                 .taskStatus("PENDING")
                 .description("Collect income documents");
 
-        var updated = new ApplicationTaskDTO(TASK_ID)
-                .loanApplicationId(APPLICATION_ID)
-                .taskType("DOCUMENT_COLLECTION")
-                .taskStatus("COMPLETED")
-                .description("Collect income documents");
+        var page = new PaginationResponseApplicationTaskDTO().content(List.of(existing));
 
-        when(applicationTaskApi.getTask(eq(APPLICATION_ID), eq(TASK_ID), isNull()))
-                .thenReturn(Mono.just(existing));
-
-        when(applicationTaskApi.updateTask(
-                eq(APPLICATION_ID), eq(TASK_ID), any(ApplicationTaskDTO.class), any(String.class)))
-                .thenReturn(Mono.just(updated));
+        when(loanOriginationApi.getApplicationTasks(eq(APPLICATION_ID), isNull()))
+                .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.completeTask(APPLICATION_ID, TASK_ID))
                 .assertNext(dto -> {
@@ -188,28 +163,9 @@ class ApplicationDetailsServiceImplTest {
     }
 
     @Test
-    void completeTask_propagatesGetTaskError() {
-        when(applicationTaskApi.getTask(eq(APPLICATION_ID), eq(TASK_ID), isNull()))
+    void completeTask_propagatesUpstreamError() {
+        when(loanOriginationApi.getApplicationTasks(eq(APPLICATION_ID), isNull()))
                 .thenReturn(Mono.error(new RuntimeException("not found")));
-
-        StepVerifier.create(service.completeTask(APPLICATION_ID, TASK_ID))
-                .expectError(RuntimeException.class)
-                .verify();
-    }
-
-    @Test
-    void completeTask_propagatesUpdateTaskError() {
-        var existing = new ApplicationTaskDTO(TASK_ID)
-                .loanApplicationId(APPLICATION_ID)
-                .taskType("DOCUMENT_COLLECTION")
-                .taskStatus("PENDING");
-
-        when(applicationTaskApi.getTask(eq(APPLICATION_ID), eq(TASK_ID), isNull()))
-                .thenReturn(Mono.just(existing));
-
-        when(applicationTaskApi.updateTask(
-                eq(APPLICATION_ID), eq(TASK_ID), any(ApplicationTaskDTO.class), any(String.class)))
-                .thenReturn(Mono.error(new RuntimeException("update failed")));
 
         StepVerifier.create(service.completeTask(APPLICATION_ID, TASK_ID))
                 .expectError(RuntimeException.class)
@@ -220,7 +176,8 @@ class ApplicationDetailsServiceImplTest {
 
     @Test
     void getFees_returnsMappedFees() {
-        var sdkFee = new ApplicationFeeDTO(FEE_ID)
+        var sdkFee = new ApplicationFeeDTO()
+                .feeId(FEE_ID)
                 .loanApplicationId(APPLICATION_ID)
                 .feeType("ORIGINATION")
                 .feeName("Origination Fee")
@@ -228,8 +185,7 @@ class ApplicationDetailsServiceImplTest {
 
         var page = new PaginationResponseApplicationFeeDTO().content(List.of(sdkFee));
 
-        when(applicationFeeApi.findAllFees(
-                eq(APPLICATION_ID), isNull(), isNull(), isNull(), isNull(), isNull()))
+        when(loanOriginationApi.getApplicationFees(eq(APPLICATION_ID), isNull()))
                 .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.getFees(APPLICATION_ID))
@@ -247,8 +203,7 @@ class ApplicationDetailsServiceImplTest {
     void getFees_returnsEmptyWhenPageContentIsNull() {
         var page = new PaginationResponseApplicationFeeDTO().content(null);
 
-        when(applicationFeeApi.findAllFees(
-                eq(APPLICATION_ID), isNull(), isNull(), isNull(), isNull(), isNull()))
+        when(loanOriginationApi.getApplicationFees(eq(APPLICATION_ID), isNull()))
                 .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.getFees(APPLICATION_ID))
@@ -257,8 +212,7 @@ class ApplicationDetailsServiceImplTest {
 
     @Test
     void getFees_propagatesUpstreamError() {
-        when(applicationFeeApi.findAllFees(
-                eq(APPLICATION_ID), isNull(), isNull(), isNull(), isNull(), isNull()))
+        when(loanOriginationApi.getApplicationFees(eq(APPLICATION_ID), isNull()))
                 .thenReturn(Mono.error(new RuntimeException("fees error")));
 
         StepVerifier.create(service.getFees(APPLICATION_ID))
@@ -271,7 +225,8 @@ class ApplicationDetailsServiceImplTest {
     @Test
     void getVerifications_returnsMappedVerifications() {
         var completedAt = LocalDateTime.of(2026, 3, 10, 9, 30);
-        var sdkVerif = new ApplicationVerificationDTO(VERIFICATION_ID)
+        var sdkVerif = new ApplicationVerificationDTO()
+                .verificationId(VERIFICATION_ID)
                 .loanApplicationId(APPLICATION_ID)
                 .verificationType("IDENTITY")
                 .verificationStatus("VERIFIED")
@@ -279,8 +234,7 @@ class ApplicationDetailsServiceImplTest {
 
         var page = new PaginationResponseApplicationVerificationDTO().content(List.of(sdkVerif));
 
-        when(applicationVerificationApi.findAllVerifications(
-                eq(APPLICATION_ID), isNull(), isNull(), isNull(), isNull(), isNull()))
+        when(loanOriginationApi.getApplicationVerifications(eq(APPLICATION_ID), isNull()))
                 .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.getVerifications(APPLICATION_ID))
@@ -297,8 +251,7 @@ class ApplicationDetailsServiceImplTest {
     void getVerifications_returnsEmptyWhenPageContentIsNull() {
         var page = new PaginationResponseApplicationVerificationDTO().content(null);
 
-        when(applicationVerificationApi.findAllVerifications(
-                eq(APPLICATION_ID), isNull(), isNull(), isNull(), isNull(), isNull()))
+        when(loanOriginationApi.getApplicationVerifications(eq(APPLICATION_ID), isNull()))
                 .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.getVerifications(APPLICATION_ID))
@@ -307,8 +260,7 @@ class ApplicationDetailsServiceImplTest {
 
     @Test
     void getVerifications_propagatesUpstreamError() {
-        when(applicationVerificationApi.findAllVerifications(
-                eq(APPLICATION_ID), isNull(), isNull(), isNull(), isNull(), isNull()))
+        when(loanOriginationApi.getApplicationVerifications(eq(APPLICATION_ID), isNull()))
                 .thenReturn(Mono.error(new RuntimeException("verifications error")));
 
         StepVerifier.create(service.getVerifications(APPLICATION_ID))

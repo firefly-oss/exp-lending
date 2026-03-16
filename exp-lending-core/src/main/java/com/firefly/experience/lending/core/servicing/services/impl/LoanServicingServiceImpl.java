@@ -1,28 +1,18 @@
 package com.firefly.experience.lending.core.servicing.services.impl;
 
-import com.firefly.core.lending.servicing.sdk.api.*;
-import com.firefly.core.lending.servicing.sdk.model.LoanAccrualDTO;
-import com.firefly.core.lending.servicing.sdk.model.LoanBalanceDTO;
-import com.firefly.core.lending.servicing.sdk.model.LoanDisbursementDTO;
-import com.firefly.core.lending.servicing.sdk.model.LoanInstallmentPlanDTO;
-import com.firefly.core.lending.servicing.sdk.model.LoanInstallmentRecordDTO;
-import com.firefly.core.lending.servicing.sdk.model.LoanRateChangeDTO;
-import com.firefly.core.lending.servicing.sdk.model.LoanRepaymentRecordDTO;
-import com.firefly.core.lending.servicing.sdk.model.LoanRepaymentScheduleDTO;
-import com.firefly.core.lending.servicing.sdk.model.LoanRestructuringDTO;
-import com.firefly.core.lending.servicing.sdk.model.LoanServicingCaseDTO;
-import com.firefly.core.lending.servicing.sdk.model.LoanServicingEventDTO;
-import com.firefly.core.lending.servicing.sdk.model.PaginationResponseLoanAccrualDTO;
-import com.firefly.core.lending.servicing.sdk.model.PaginationResponseLoanBalanceDTO;
-import com.firefly.core.lending.servicing.sdk.model.PaginationResponseLoanDisbursementDTO;
-import com.firefly.core.lending.servicing.sdk.model.PaginationResponseLoanInstallmentPlanDTO;
-import com.firefly.core.lending.servicing.sdk.model.PaginationResponseLoanInstallmentRecordDTO;
-import com.firefly.core.lending.servicing.sdk.model.PaginationResponseLoanRateChangeDTO;
-import com.firefly.core.lending.servicing.sdk.model.PaginationResponseLoanRepaymentRecordDTO;
-import com.firefly.core.lending.servicing.sdk.model.PaginationResponseLoanRepaymentScheduleDTO;
-import com.firefly.core.lending.servicing.sdk.model.PaginationResponseLoanRestructuringDTO;
-import com.firefly.core.lending.servicing.sdk.model.PaginationResponseLoanServicingCaseDTO;
-import com.firefly.core.lending.servicing.sdk.model.PaginationResponseLoanServicingEventDTO;
+import com.firefly.domain.lending.loan.servicing.sdk.api.LoanServicingApi;
+import com.firefly.domain.lending.loan.servicing.sdk.api.LoanServicingQueriesApi;
+import com.firefly.domain.lending.loan.servicing.sdk.model.LoanAccrualDTO;
+import com.firefly.domain.lending.loan.servicing.sdk.model.LoanBalanceDTO;
+import com.firefly.domain.lending.loan.servicing.sdk.model.LoanDisbursementDTO;
+import com.firefly.domain.lending.loan.servicing.sdk.model.LoanInstallmentPlanDTO;
+import com.firefly.domain.lending.loan.servicing.sdk.model.LoanInstallmentRecordDTO;
+import com.firefly.domain.lending.loan.servicing.sdk.model.LoanRateChangeDTO;
+import com.firefly.domain.lending.loan.servicing.sdk.model.LoanRepaymentRecordDTO;
+import com.firefly.domain.lending.loan.servicing.sdk.model.LoanRepaymentScheduleDTO;
+import com.firefly.domain.lending.loan.servicing.sdk.model.LoanRestructuringDTO;
+import com.firefly.domain.lending.loan.servicing.sdk.model.LoanServicingEventDTO;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.firefly.experience.lending.core.servicing.commands.RequestEarlyRepaymentCommand;
 import com.firefly.experience.lending.core.servicing.commands.RequestRestructuringCommand;
 import com.firefly.experience.lending.core.servicing.queries.*;
@@ -36,63 +26,46 @@ import reactor.core.publisher.Mono;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
- * Default implementation of {@link LoanServicingService}, delegating to the Loan Servicing SDK
- * for balance, schedule, installment, disbursement, rate change, accrual, and restructuring APIs.
- *
- * // ARCH-EXCEPTION: No domain SDK exposes {@link LoanBalanceApi},
- * {@link LoanRepaymentScheduleApi}, {@link LoanInstallmentPlanApi},
- * {@link LoanInstallmentRecordApi}, {@link LoanDisbursementApi}, {@link LoanDisbursementPlanApi},
- * {@link LoanRepaymentRecordApi}, {@link LoanRateChangeApi}, {@link LoanAccrualApi},
- * {@link LoanEscrowApi}, {@link LoanRebateApi}, {@link LoanRestructuringApi},
- * {@link LoanServicingEventApi}, or {@link LoanNotificationApi}; direct
- * core-lending-loan-servicing-sdk usage is temporary until the domain layer surfaces
- * these endpoints.
+ * Default implementation of {@link LoanServicingService}, delegating to the domain Loan Servicing
+ * SDK for balance, schedule, installment, disbursement, rate change, accrual, and restructuring
+ * queries, and to {@code LoanServicingApi} for command operations.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class LoanServicingServiceImpl implements LoanServicingService {
 
-    private final LoanServicingCaseApi loanServicingCaseApi;
-    private final LoanBalanceApi loanBalanceApi;
-    private final LoanRepaymentScheduleApi loanRepaymentScheduleApi;
-    private final LoanInstallmentPlanApi loanInstallmentPlanApi;
-    private final LoanInstallmentRecordApi loanInstallmentRecordApi;
-    private final LoanDisbursementApi loanDisbursementApi;
-    private final LoanDisbursementPlanApi loanDisbursementPlanApi;
-    private final LoanRepaymentRecordApi loanRepaymentRecordApi;
-    private final LoanRateChangeApi loanRateChangeApi;
-    private final LoanAccrualApi loanAccrualApi;
-    private final LoanEscrowApi loanEscrowApi;
-    private final LoanRebateApi loanRebateApi;
-    private final LoanRestructuringApi loanRestructuringApi;
-    private final LoanServicingEventApi loanServicingEventApi;
-    private final LoanNotificationApi loanNotificationApi;
+    private final LoanServicingApi loanServicingApi;
+    private final LoanServicingQueriesApi loanServicingQueriesApi;
+    private final ObjectMapper objectMapper;
 
     @Override
     public Flux<LoanSummaryDTO> listLoans() {
+        // MVP: the domain SDK does not expose a list-all-servicing-cases endpoint.
+        // Returns an empty list. Replace when the domain layer surfaces this endpoint.
         log.debug("Listing loan servicing cases");
-        return loanServicingCaseApi
-                .findAllServicingCases(null, UUID.randomUUID().toString())
-                .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
-                .map(this::toSummary);
+        return Flux.empty();
     }
 
     @Override
     public Mono<LoanDetailDTO> getLoan(UUID loanId) {
         log.debug("Getting loan loanId={}", loanId);
-        return loanServicingCaseApi.getServicingCaseById(loanId, UUID.randomUUID().toString())
-                .map(this::toDetail);
+        return loanServicingApi.getLoanDetails(loanId.toString(), null)
+                .map(item -> {
+                    var jsonMap = objectMapper.convertValue(item, Map.class);
+                    return toLoanDetail(loanId, jsonMap);
+                });
     }
 
     @Override
     public Mono<BalanceDTO> getBalance(UUID loanId) {
         log.debug("Getting current balance loanId={}", loanId);
-        return loanBalanceApi
-                .findAllBalances(loanId, null, UUID.randomUUID().toString())
+        return loanServicingQueriesApi
+                .getLoanBalances(loanId, null)
                 .map(page -> {
                     List<LoanBalanceDTO> content = page.getContent() != null ? page.getContent() : List.of();
                     // Prefer current snapshot; fall back to first entry
@@ -108,8 +81,8 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     @Override
     public Mono<BalanceHistoryDTO> getBalanceHistory(UUID loanId) {
         log.debug("Getting balance history loanId={}", loanId);
-        return loanBalanceApi
-                .findAllBalances(loanId, null, UUID.randomUUID().toString())
+        return loanServicingQueriesApi
+                .getLoanBalances(loanId, null)
                 .map(page -> {
                     List<BalanceDTO> entries = page.getContent() != null
                             ? page.getContent().stream().map(this::toBalance).toList()
@@ -121,8 +94,8 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     @Override
     public Flux<ScheduleEntryDTO> getRepaymentSchedule(UUID loanId) {
         log.debug("Getting repayment schedule loanId={}", loanId);
-        return loanRepaymentScheduleApi
-                .findAllRepaymentSchedules(loanId, null, UUID.randomUUID().toString())
+        return loanServicingQueriesApi
+                .getLoanSchedule(loanId, null)
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toScheduleEntry);
     }
@@ -130,8 +103,8 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     @Override
     public Flux<InstallmentDTO> getInstallments(UUID loanId) {
         log.debug("Getting installments loanId={}", loanId);
-        return loanInstallmentPlanApi
-                .findAllInstallmentPlans(loanId, null, UUID.randomUUID().toString())
+        return loanServicingQueriesApi
+                .getLoanInstallmentPlan(loanId, null)
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toInstallment);
     }
@@ -139,15 +112,19 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     @Override
     public Mono<InstallmentDTO> getInstallment(UUID loanId, UUID installmentId) {
         log.debug("Getting installment loanId={} installmentId={}", loanId, installmentId);
-        return loanInstallmentPlanApi.getInstallmentPlanById(loanId, installmentId, UUID.randomUUID().toString())
+        return loanServicingQueriesApi
+                .getLoanInstallmentPlan(loanId, null)
+                .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
+                .filter(p -> installmentId.equals(p.getLoanInstallmentPlanId()))
+                .next()
                 .map(this::toInstallment);
     }
 
     @Override
     public Flux<InstallmentPaymentDTO> getInstallmentPayments(UUID loanId, UUID installmentId) {
         log.debug("Getting payments for installmentId={} loanId={}", installmentId, loanId);
-        return loanInstallmentRecordApi
-                .findAllInstallmentRecords(loanId, null, UUID.randomUUID().toString())
+        return loanServicingQueriesApi
+                .getLoanInstallmentRecords(loanId, null)
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toInstallmentPayment);
     }
@@ -155,8 +132,8 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     @Override
     public Flux<DisbursementDTO> getDisbursements(UUID loanId) {
         log.debug("Getting disbursements loanId={}", loanId);
-        return loanDisbursementApi
-                .findAllDisbursements(loanId, null, UUID.randomUUID().toString())
+        return loanServicingQueriesApi
+                .getLoanDisbursements(loanId, null)
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toDisbursement);
     }
@@ -164,13 +141,17 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     @Override
     public Mono<DisbursementDTO> getDisbursement(UUID loanId, UUID disbursementId) {
         log.debug("Getting disbursement loanId={} disbursementId={}", loanId, disbursementId);
-        return loanDisbursementApi.getDisbursementById(loanId, disbursementId, UUID.randomUUID().toString())
+        return loanServicingQueriesApi
+                .getLoanDisbursements(loanId, null)
+                .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
+                .filter(d -> disbursementId.equals(d.getLoanDisbursementId()))
+                .next()
                 .map(this::toDisbursement);
     }
 
     @Override
     public Mono<DisbursementPlanDTO> getDisbursementPlan(UUID loanId) {
-        // MVP: findAllDisbursementPlans returns untyped PaginationResponse; returning empty plan.
+        // MVP: getLoanDisbursementPlan returns untyped PaginationResponse; returning empty plan.
         // Replace when the SDK exposes a typed pagination response for disbursement plans.
         log.debug("Getting disbursement plan loanId={}", loanId);
         return Mono.just(DisbursementPlanDTO.builder().entries(List.of()).build());
@@ -179,8 +160,8 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     @Override
     public Flux<RepaymentDTO> getRepayments(UUID loanId) {
         log.debug("Getting repayments loanId={}", loanId);
-        return loanRepaymentRecordApi
-                .findAllRepaymentRecords(loanId, null, UUID.randomUUID().toString())
+        return loanServicingQueriesApi
+                .getLoanRepayments(loanId, null)
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toRepayment);
     }
@@ -188,20 +169,15 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     @Override
     public Mono<Void> requestEarlyRepayment(UUID loanId, RequestEarlyRepaymentCommand command) {
         log.debug("Requesting early repayment loanId={}", loanId);
-        var dto = new LoanRepaymentRecordDTO()
-                .loanServicingCaseId(loanId)
-                .paymentAmount(command.getAmount())
-                .isPartialPayment("PARTIAL".equalsIgnoreCase(command.getType()))
-                .paymentDate(LocalDate.now());
-        return loanRepaymentRecordApi
-                .createRepaymentRecord(loanId, dto, UUID.randomUUID().toString())
+        return loanServicingApi
+                .applyRepayment(loanId.toString(), command.getAmount(), UUID.randomUUID().toString())
                 .then();
     }
 
     @Override
     public Mono<EarlyRepaymentSimulationDTO> simulateEarlyRepayment(UUID loanId,
                                                                      RequestEarlyRepaymentCommand command) {
-        // MVP: no dedicated simulation endpoint in the core SDK.
+        // MVP: no dedicated simulation endpoint in the domain SDK.
         // Returns a stub response. Replace when upstream exposes a simulation resource.
         log.debug("Simulating early repayment loanId={}", loanId);
         BigDecimal amount = command.getAmount() != null ? command.getAmount() : BigDecimal.ZERO;
@@ -215,19 +191,24 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     @Override
     public Mono<RateInfoDTO> getRateInfo(UUID loanId) {
         log.debug("Getting rate info loanId={}", loanId);
-        return loanServicingCaseApi.getServicingCaseById(loanId, UUID.randomUUID().toString())
-                .map(c -> RateInfoDTO.builder()
-                        .currentRate(c.getInterestRate())
-                        .rateType("FIXED")   // MVP: rate type not stored on LoanServicingCaseDTO
-                        .nextReviewDate(null) // MVP: no review schedule in core SDK
-                        .build());
+        return loanServicingApi.getLoanDetails(loanId.toString(), null)
+                .map(item -> {
+                    var jsonMap = objectMapper.convertValue(item, Map.class);
+                    BigDecimal interestRate = jsonMap.get("interestRate") != null
+                            ? new BigDecimal(jsonMap.get("interestRate").toString()) : null;
+                    return RateInfoDTO.builder()
+                            .currentRate(interestRate)
+                            .rateType("FIXED")   // MVP: rate type not stored on LoanServicingCaseDTO
+                            .nextReviewDate(null) // MVP: no review schedule in domain SDK
+                            .build();
+                });
     }
 
     @Override
     public Flux<RateChangeDTO> getRateChanges(UUID loanId) {
         log.debug("Getting rate changes loanId={}", loanId);
-        return loanRateChangeApi
-                .findAllRateChanges(loanId, null, UUID.randomUUID().toString())
+        return loanServicingQueriesApi
+                .getLoanRateChanges(loanId, null)
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toRateChange);
     }
@@ -235,15 +216,15 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     @Override
     public Flux<AccrualDTO> getAccruals(UUID loanId) {
         log.debug("Getting accruals loanId={}", loanId);
-        return loanAccrualApi
-                .findAllAccruals(loanId, null, UUID.randomUUID().toString())
+        return loanServicingQueriesApi
+                .getLoanAccruals(loanId, null)
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toAccrual);
     }
 
     @Override
     public Flux<EscrowDTO> getEscrow(UUID loanId) {
-        // MVP: findAllEscrows returns untyped PaginationResponse; returning empty list.
+        // MVP: getLoanEscrow returns untyped PaginationResponse; returning empty list.
         // Replace when the SDK exposes a typed pagination response for escrows.
         log.debug("Getting escrow loanId={}", loanId);
         return Flux.empty();
@@ -251,7 +232,7 @@ public class LoanServicingServiceImpl implements LoanServicingService {
 
     @Override
     public Flux<RebateDTO> getRebates(UUID loanId) {
-        // MVP: findAllRebates returns untyped PaginationResponse; returning empty list.
+        // MVP: getLoanRebates returns untyped PaginationResponse; returning empty list.
         // Replace when the SDK exposes a typed pagination response for rebates.
         log.debug("Getting rebates loanId={}", loanId);
         return Flux.empty();
@@ -260,27 +241,35 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     @Override
     public Mono<RestructuringDTO> requestRestructuring(UUID loanId, RequestRestructuringCommand command) {
         log.debug("Requesting restructuring loanId={}", loanId);
-        var dto = new LoanRestructuringDTO()
-                .loanServicingCaseId(loanId)
-                .reason(command.getReason())
-                .restructuringDate(LocalDate.now());
-        return loanRestructuringApi
-                .createRestructuring(loanId, dto, UUID.randomUUID().toString())
-                .map(this::toRestructuring);
+        return loanServicingApi
+                .applyRestructure(loanId.toString(), command.getReason(), UUID.randomUUID().toString())
+                .map(item -> {
+                    var jsonMap = objectMapper.convertValue(item, Map.class);
+                    UUID restructuringId = jsonMap.get("loanRestructuringId") != null
+                            ? UUID.fromString(jsonMap.get("loanRestructuringId").toString()) : UUID.randomUUID();
+                    String reason = jsonMap.get("reason") != null
+                            ? jsonMap.get("reason").toString() : command.getReason();
+                    return RestructuringDTO.builder()
+                            .restructuringId(restructuringId)
+                            .status("APPROVED") // MVP: domain SDK returns Object; no status field
+                            .requestedAt(LocalDate.now().atStartOfDay())
+                            .newTerms(reason)
+                            .build();
+                });
     }
 
     @Override
     public Flux<RestructuringDTO> getRestructurings(UUID loanId) {
         log.debug("Getting restructurings loanId={}", loanId);
-        return loanRestructuringApi
-                .findAllRestructurings(loanId, null, UUID.randomUUID().toString())
+        return loanServicingQueriesApi
+                .getLoanRestructurings(loanId, null)
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toRestructuring);
     }
 
     @Override
     public Flux<LoanDocumentDTO> getDocuments(UUID loanId) {
-        // MVP: no document resource in core-lending-loan-servicing-sdk.
+        // MVP: no document resource in domain-lending-loan-servicing-sdk.
         // Replace when upstream exposes a loan document sub-resource.
         log.debug("Getting documents loanId={}", loanId);
         return Flux.empty();
@@ -289,15 +278,15 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     @Override
     public Flux<LoanEventDTO> getEvents(UUID loanId) {
         log.debug("Getting servicing events loanId={}", loanId);
-        return loanServicingEventApi
-                .findAllServicingEvents(loanId, null, UUID.randomUUID().toString())
+        return loanServicingQueriesApi
+                .getLoanEvents(loanId, null)
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toEvent);
     }
 
     @Override
     public Flux<LoanNotificationDTO> getNotifications(UUID loanId) {
-        // MVP: findAllNotifications returns untyped PaginationResponse; returning empty list.
+        // MVP: getLoanNotifications returns untyped PaginationResponse; returning empty list.
         // Replace when the SDK exposes a typed pagination response for loan notifications.
         log.debug("Getting notifications loanId={}", loanId);
         return Flux.empty();
@@ -305,30 +294,33 @@ public class LoanServicingServiceImpl implements LoanServicingService {
 
     // --- Mappers ---
 
-    private LoanSummaryDTO toSummary(LoanServicingCaseDTO dto) {
-        return LoanSummaryDTO.builder()
-                .loanId(dto.getLoanServicingCaseId())
-                .productType(dto.getProductCatalogId() != null ? dto.getProductCatalogId().toString() : null)
-                .status(dto.getServicingStatus() != null ? dto.getServicingStatus().getValue() : null)
-                .outstandingBalance(null) // MVP: requires separate balance query
-                .nextPaymentDate(null)    // MVP: requires schedule query
-                .nextPaymentAmount(null)  // MVP: requires schedule query
-                .build();
-    }
-
-    private LoanDetailDTO toDetail(LoanServicingCaseDTO dto) {
+    private LoanDetailDTO toLoanDetail(UUID loanId, Map<String, Object> jsonMap) {
+        String status = jsonMap.get("servicingStatus") != null
+                ? jsonMap.get("servicingStatus").toString() : null;
+        String productType = jsonMap.get("productCatalogId") != null
+                ? jsonMap.get("productCatalogId").toString() : null;
+        BigDecimal principalAmount = jsonMap.get("principalAmount") != null
+                ? new BigDecimal(jsonMap.get("principalAmount").toString()) : null;
+        Integer loanTerm = jsonMap.get("loanTerm") != null
+                ? Integer.parseInt(jsonMap.get("loanTerm").toString()) : null;
+        BigDecimal interestRate = jsonMap.get("interestRate") != null
+                ? new BigDecimal(jsonMap.get("interestRate").toString()) : null;
+        LocalDate originationDate = jsonMap.get("originationDate") != null
+                ? LocalDate.parse(jsonMap.get("originationDate").toString()) : null;
+        LocalDate maturityDate = jsonMap.get("maturityDate") != null
+                ? LocalDate.parse(jsonMap.get("maturityDate").toString()) : null;
         return LoanDetailDTO.builder()
-                .loanId(dto.getLoanServicingCaseId())
-                .productType(dto.getProductCatalogId() != null ? dto.getProductCatalogId().toString() : null)
-                .status(dto.getServicingStatus() != null ? dto.getServicingStatus().getValue() : null)
+                .loanId(loanId)
+                .productType(productType)
+                .status(status)
                 .outstandingBalance(null)
                 .nextPaymentDate(null)
                 .nextPaymentAmount(null)
-                .originalAmount(dto.getPrincipalAmount())
-                .term(dto.getLoanTerm())
-                .interestRate(dto.getInterestRate())
-                .disbursementDate(dto.getOriginationDate())
-                .maturityDate(dto.getMaturityDate())
+                .originalAmount(principalAmount)
+                .term(loanTerm)
+                .interestRate(interestRate)
+                .disbursementDate(originationDate)
+                .maturityDate(maturityDate)
                 .build();
     }
 

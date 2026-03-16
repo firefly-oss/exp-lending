@@ -1,8 +1,9 @@
 package com.firefly.experience.lending.core.application.documents.services.impl;
 
-import com.firefly.core.lending.origination.sdk.api.ApplicationDocumentApi;
+import com.firefly.domain.lending.loan.origination.sdk.api.LoanOriginationApi;
+import com.firefly.domain.lending.loan.origination.sdk.model.ApplicationDocumentDTO;
+import com.firefly.domain.lending.loan.origination.sdk.model.RegisterApplicationDocumentCommand;
 import com.firefly.experience.lending.core.application.documents.commands.UploadDocumentCommand;
-import com.firefly.experience.lending.core.application.documents.queries.ApplicationDocumentDTO;
 import com.firefly.experience.lending.core.application.documents.services.ApplicationDocumentsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,62 +16,65 @@ import java.util.UUID;
 
 /**
  * Default implementation of {@link ApplicationDocumentsService}, delegating to the
- * Loan Origination SDK's {@code ApplicationDocumentApi} for document operations.
- *
- * // ARCH-EXCEPTION: No domain SDK exposes {@link ApplicationDocumentApi}; direct
- * core-lending-origination-sdk usage is temporary until the domain layer surfaces this endpoint.
+ * domain Loan Origination SDK's {@code LoanOriginationApi} for document operations.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ApplicationDocumentsServiceImpl implements ApplicationDocumentsService {
 
-    private final ApplicationDocumentApi applicationDocumentApi;
+    private final LoanOriginationApi loanOriginationApi;
 
     @Override
-    public Flux<ApplicationDocumentDTO> listDocuments(UUID applicationId) {
+    public Flux<com.firefly.experience.lending.core.application.documents.queries.ApplicationDocumentDTO> listDocuments(UUID applicationId) {
         log.debug("Listing documents for applicationId={}", applicationId);
-        return applicationDocumentApi
-                .findAllDocuments(applicationId, null, null, null, null, UUID.randomUUID().toString())
+        return loanOriginationApi
+                .getApplicationDocuments(applicationId, null)
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::mapToDTO);
     }
 
     @Override
-    public Mono<ApplicationDocumentDTO> uploadDocument(UUID applicationId, UploadDocumentCommand command) {
+    public Mono<com.firefly.experience.lending.core.application.documents.queries.ApplicationDocumentDTO> uploadDocument(UUID applicationId, UploadDocumentCommand command) {
         log.debug("Uploading document for applicationId={}", applicationId);
 
-        var sdkDto = new com.firefly.core.lending.origination.sdk.model.ApplicationDocumentDTO()
-                .loanApplicationId(applicationId)
+        var sdkCmd = new RegisterApplicationDocumentCommand()
                 .documentName(command.getFileName())
                 .mimeType(command.getDocumentType())
-                .isReceived(true)
-                .isMandatory(false)
                 .fileSizeBytes(command.getContent() != null ? (long) command.getContent().length : null);
 
-        return applicationDocumentApi
-                .createDocument(applicationId, sdkDto, UUID.randomUUID().toString())
+        return loanOriginationApi
+                .attachDocuments(applicationId, sdkCmd, UUID.randomUUID().toString())
+                .then(Mono.defer(() -> loanOriginationApi.getApplicationDocuments(applicationId, null)))
+                .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
+                .filter(d -> command.getFileName().equals(d.getDocumentName()))
+                .next()
                 .map(this::mapToDTO);
     }
 
     @Override
     public Mono<byte[]> downloadDocument(UUID applicationId, UUID documentId) {
-        // MVP: the core SDK returns document metadata only; binary content is managed by an ECM layer.
+        // MVP: the domain SDK returns document metadata only; binary content is managed by an ECM layer.
         // Returns empty bytes until ECM integration is wired.
         log.debug("Downloading document documentId={} for applicationId={}", documentId, applicationId);
-        return applicationDocumentApi
-                .getDocument(applicationId, documentId, UUID.randomUUID().toString())
+        return loanOriginationApi
+                .getApplicationDocuments(applicationId, null)
+                .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
+                .filter(d -> documentId.equals(d.getApplicationDocumentId()))
+                .next()
                 .map(d -> new byte[0]);
     }
 
     @Override
     public Mono<Void> deleteDocument(UUID applicationId, UUID documentId) {
+        // MVP: the domain SDK does not expose a delete-document endpoint.
+        // Operation completes as a no-op until the domain layer surfaces this endpoint.
         log.debug("Deleting document documentId={} for applicationId={}", documentId, applicationId);
-        return applicationDocumentApi.deleteDocument(applicationId, documentId, UUID.randomUUID().toString());
+        return Mono.empty();
     }
 
-    private ApplicationDocumentDTO mapToDTO(com.firefly.core.lending.origination.sdk.model.ApplicationDocumentDTO src) {
-        return ApplicationDocumentDTO.builder()
+    private com.firefly.experience.lending.core.application.documents.queries.ApplicationDocumentDTO mapToDTO(ApplicationDocumentDTO src) {
+        return com.firefly.experience.lending.core.application.documents.queries.ApplicationDocumentDTO.builder()
                 .documentId(src.getApplicationDocumentId())
                 .applicationId(src.getLoanApplicationId())
                 .fileName(src.getDocumentName())

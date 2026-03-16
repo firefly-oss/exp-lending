@@ -66,18 +66,9 @@
             <groupId>com.firefly</groupId>
             <artifactId>domain-lending-loan-origination-sdk</artifactId>
         </dependency>
-        <!-- Core SDK — required for document CRUD operations not exposed by the domain SDK -->
-        <dependency>
-            <groupId>com.firefly</groupId>
-            <artifactId>core-lending-loan-origination-sdk</artifactId>
-        </dependency>
         <dependency>
             <groupId>com.firefly</groupId>
             <artifactId>domain-lending-loan-servicing-sdk</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.firefly</groupId>
-            <artifactId>core-lending-loan-servicing-sdk</artifactId>
         </dependency>
         <dependency>
             <groupId>com.firefly</groupId>
@@ -98,10 +89,6 @@
         <dependency>
             <groupId>com.firefly</groupId>
             <artifactId>domain-common-contracts-sdk</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.firefly</groupId>
-            <artifactId>core-common-contract-mgmt-sdk</artifactId>
         </dependency>
         <dependency>
             <groupId>com.firefly</groupId>

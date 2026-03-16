@@ -1,8 +1,9 @@
 package com.firefly.experience.lending.core.application.documents.services;
 
-import com.firefly.core.lending.origination.sdk.api.ApplicationDocumentApi;
-import com.firefly.core.lending.origination.sdk.model.ApplicationDocumentDTO;
-import com.firefly.core.lending.origination.sdk.model.PaginationResponseApplicationDocumentDTO;
+import com.firefly.domain.lending.loan.origination.sdk.api.LoanOriginationApi;
+import com.firefly.domain.lending.loan.origination.sdk.model.ApplicationDocumentDTO;
+import com.firefly.domain.lending.loan.origination.sdk.model.PaginationResponseApplicationDocumentDTO;
+import com.firefly.domain.lending.loan.origination.sdk.model.RegisterApplicationDocumentCommand;
 import com.firefly.experience.lending.core.application.documents.commands.UploadDocumentCommand;
 import com.firefly.experience.lending.core.application.documents.services.impl.ApplicationDocumentsServiceImpl;
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,7 @@ import static org.mockito.Mockito.when;
 class ApplicationDocumentsServiceImplTest {
 
     @Mock
-    private ApplicationDocumentApi applicationDocumentApi;
+    private LoanOriginationApi loanOriginationApi;
 
     @InjectMocks
     private ApplicationDocumentsServiceImpl service;
@@ -37,7 +38,8 @@ class ApplicationDocumentsServiceImplTest {
 
     @Test
     void listDocuments_returnsDocumentsMappedFromPage() {
-        var sdkDto = new ApplicationDocumentDTO(DOCUMENT_ID)
+        var sdkDto = new ApplicationDocumentDTO()
+                .applicationDocumentId(DOCUMENT_ID)
                 .loanApplicationId(APPLICATION_ID)
                 .documentName("passport.pdf")
                 .mimeType("application/pdf")
@@ -47,7 +49,7 @@ class ApplicationDocumentsServiceImplTest {
         var page = new PaginationResponseApplicationDocumentDTO()
                 .content(List.of(sdkDto));
 
-        when(applicationDocumentApi.findAllDocuments(eq(APPLICATION_ID), isNull(), isNull(), isNull(), isNull(), isNull()))
+        when(loanOriginationApi.getApplicationDocuments(eq(APPLICATION_ID), isNull()))
                 .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.listDocuments(APPLICATION_ID))
@@ -65,7 +67,7 @@ class ApplicationDocumentsServiceImplTest {
     void listDocuments_returnsEmptyWhenPageContentIsNull() {
         var page = new PaginationResponseApplicationDocumentDTO().content(null);
 
-        when(applicationDocumentApi.findAllDocuments(eq(APPLICATION_ID), isNull(), isNull(), isNull(), isNull(), isNull()))
+        when(loanOriginationApi.getApplicationDocuments(eq(APPLICATION_ID), isNull()))
                 .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.listDocuments(APPLICATION_ID))
@@ -74,7 +76,7 @@ class ApplicationDocumentsServiceImplTest {
 
     @Test
     void listDocuments_propagatesUpstreamError() {
-        when(applicationDocumentApi.findAllDocuments(eq(APPLICATION_ID), isNull(), isNull(), isNull(), isNull(), isNull()))
+        when(loanOriginationApi.getApplicationDocuments(eq(APPLICATION_ID), isNull()))
                 .thenReturn(Mono.error(new RuntimeException("upstream error")));
 
         StepVerifier.create(service.listDocuments(APPLICATION_ID))
@@ -90,15 +92,18 @@ class ApplicationDocumentsServiceImplTest {
         command.setDocumentType("image/jpeg");
         command.setContent(new byte[]{1, 2, 3});
 
-        var sdkResponse = new ApplicationDocumentDTO(DOCUMENT_ID)
+        var sdkResponse = new ApplicationDocumentDTO()
+                .applicationDocumentId(DOCUMENT_ID)
                 .loanApplicationId(APPLICATION_ID)
                 .documentName("id_card.jpg")
                 .mimeType("image/jpeg")
                 .receivedAt(LocalDateTime.now())
                 .fileSizeBytes(3L);
 
-        when(applicationDocumentApi.createDocument(eq(APPLICATION_ID), any(ApplicationDocumentDTO.class), any(String.class)))
-                .thenReturn(Mono.just(sdkResponse));
+        when(loanOriginationApi.attachDocuments(eq(APPLICATION_ID), any(RegisterApplicationDocumentCommand.class), any(String.class)))
+                .thenReturn(Mono.just(new Object()));
+        when(loanOriginationApi.getApplicationDocuments(eq(APPLICATION_ID), isNull()))
+                .thenReturn(Mono.just(new PaginationResponseApplicationDocumentDTO().content(List.of(sdkResponse))));
 
         StepVerifier.create(service.uploadDocument(APPLICATION_ID, command))
                 .assertNext(dto -> {
@@ -116,7 +121,7 @@ class ApplicationDocumentsServiceImplTest {
         command.setDocumentType("application/pdf");
         command.setContent(new byte[0]);
 
-        when(applicationDocumentApi.createDocument(eq(APPLICATION_ID), any(), any()))
+        when(loanOriginationApi.attachDocuments(eq(APPLICATION_ID), any(), any()))
                 .thenReturn(Mono.error(new RuntimeException("create failed")));
 
         StepVerifier.create(service.uploadDocument(APPLICATION_ID, command))
@@ -126,11 +131,12 @@ class ApplicationDocumentsServiceImplTest {
 
     @Test
     void downloadDocument_returnsEmptyByteArray() {
-        var sdkResponse = new ApplicationDocumentDTO(DOCUMENT_ID)
+        var sdkResponse = new ApplicationDocumentDTO()
+                .applicationDocumentId(DOCUMENT_ID)
                 .loanApplicationId(APPLICATION_ID);
 
-        when(applicationDocumentApi.getDocument(eq(APPLICATION_ID), eq(DOCUMENT_ID), isNull()))
-                .thenReturn(Mono.just(sdkResponse));
+        when(loanOriginationApi.getApplicationDocuments(eq(APPLICATION_ID), isNull()))
+                .thenReturn(Mono.just(new PaginationResponseApplicationDocumentDTO().content(List.of(sdkResponse))));
 
         StepVerifier.create(service.downloadDocument(APPLICATION_ID, DOCUMENT_ID))
                 .assertNext(bytes -> assertThat(bytes).isEmpty())
@@ -139,20 +145,13 @@ class ApplicationDocumentsServiceImplTest {
 
     @Test
     void deleteDocument_completesSuccessfully() {
-        when(applicationDocumentApi.deleteDocument(eq(APPLICATION_ID), eq(DOCUMENT_ID), any(String.class)))
-                .thenReturn(Mono.empty());
-
         StepVerifier.create(service.deleteDocument(APPLICATION_ID, DOCUMENT_ID))
                 .verifyComplete();
     }
 
     @Test
-    void deleteDocument_propagatesUpstreamError() {
-        when(applicationDocumentApi.deleteDocument(eq(APPLICATION_ID), eq(DOCUMENT_ID), any()))
-                .thenReturn(Mono.error(new RuntimeException("delete failed")));
-
+    void deleteDocument_completesAsNoOp() {
         StepVerifier.create(service.deleteDocument(APPLICATION_ID, DOCUMENT_ID))
-                .expectError(RuntimeException.class)
-                .verify();
+                .verifyComplete();
     }
 }

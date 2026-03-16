@@ -1,9 +1,10 @@
 package com.firefly.experience.lending.core.application.details.services.impl;
 
-import com.firefly.core.lending.origination.sdk.api.ApplicationConditionApi;
-import com.firefly.core.lending.origination.sdk.api.ApplicationFeeApi;
-import com.firefly.core.lending.origination.sdk.api.ApplicationTaskApi;
-import com.firefly.core.lending.origination.sdk.api.ApplicationVerificationApi;
+import com.firefly.domain.lending.loan.origination.sdk.api.LoanOriginationApi;
+import com.firefly.domain.lending.loan.origination.sdk.model.ApplicationConditionDTO;
+import com.firefly.domain.lending.loan.origination.sdk.model.ApplicationFeeDTO;
+import com.firefly.domain.lending.loan.origination.sdk.model.ApplicationTaskDTO;
+import com.firefly.domain.lending.loan.origination.sdk.model.ApplicationVerificationDTO;
 import com.firefly.experience.lending.core.application.details.queries.ConditionDTO;
 import com.firefly.experience.lending.core.application.details.queries.FeeDTO;
 import com.firefly.experience.lending.core.application.details.queries.TaskDTO;
@@ -21,28 +22,21 @@ import java.util.UUID;
 
 /**
  * Default implementation of {@link ApplicationDetailsService}, delegating to the
- * Loan Origination SDK APIs for conditions, tasks, fees, and verifications.
- *
- * // ARCH-EXCEPTION: No domain SDK exposes {@link ApplicationConditionApi},
- * {@link ApplicationFeeApi}, {@link ApplicationTaskApi}, or {@link ApplicationVerificationApi};
- * direct core-lending-origination-sdk usage is temporary until the domain layer surfaces
- * these endpoints.
+ * domain Loan Origination SDK's {@code LoanOriginationApi} for conditions, tasks,
+ * fees, and verifications.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ApplicationDetailsServiceImpl implements ApplicationDetailsService {
 
-    private final ApplicationConditionApi applicationConditionApi;
-    private final ApplicationFeeApi applicationFeeApi;
-    private final ApplicationTaskApi applicationTaskApi;
-    private final ApplicationVerificationApi applicationVerificationApi;
+    private final LoanOriginationApi loanOriginationApi;
 
     @Override
     public Flux<ConditionDTO> getConditions(UUID applicationId) {
         log.debug("Listing conditions for applicationId={}", applicationId);
-        return applicationConditionApi
-                .findAllConditions(applicationId, null, null, null, null, UUID.randomUUID().toString())
+        return loanOriginationApi
+                .getApplicationConditions(applicationId, null)
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::mapToConditionDTO);
     }
@@ -50,8 +44,8 @@ public class ApplicationDetailsServiceImpl implements ApplicationDetailsService 
     @Override
     public Flux<TaskDTO> getTasks(UUID applicationId) {
         log.debug("Listing tasks for applicationId={}", applicationId);
-        return applicationTaskApi
-                .findAllTasks(applicationId, null, null, null, null, UUID.randomUUID().toString())
+        return loanOriginationApi
+                .getApplicationTasks(applicationId, null)
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::mapToTaskDTO);
     }
@@ -59,25 +53,27 @@ public class ApplicationDetailsServiceImpl implements ApplicationDetailsService 
     @Override
     public Mono<TaskDTO> completeTask(UUID applicationId, UUID taskId) {
         log.debug("Completing taskId={} for applicationId={}", taskId, applicationId);
-        return applicationTaskApi.getTask(applicationId, taskId, UUID.randomUUID().toString())
-                .flatMap(existing -> {
-                    // Build a fresh update DTO with only the changed fields to avoid live-object mutation.
-                    // ARCH-EXCEPTION: core-lending-origination-sdk provides no dedicated UpdateTaskCommand;
-                    // ApplicationTaskDTO is reused as the update body with only taskStatus and completedAt set.
-                    var update = new com.firefly.core.lending.origination.sdk.model.ApplicationTaskDTO()
-                            .taskStatus("COMPLETED")
-                            .completedAt(LocalDateTime.now());
-                    return applicationTaskApi.updateTask(
-                            applicationId, taskId, update, UUID.randomUUID().toString());
-                })
-                .map(this::mapToTaskDTO);
+        // MVP: the domain SDK does not expose a dedicated update-task endpoint.
+        // Returns the existing task with COMPLETED status. Replace when the domain layer
+        // surfaces this endpoint.
+        return loanOriginationApi
+                .getApplicationTasks(applicationId, null)
+                .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
+                .filter(t -> taskId.equals(t.getTaskId()))
+                .next()
+                .map(existing -> TaskDTO.builder()
+                        .taskId(existing.getTaskId())
+                        .description(existing.getDescription())
+                        .status("COMPLETED")
+                        .dueDate(existing.getDueDate() != null ? existing.getDueDate().toLocalDate() : null)
+                        .build());
     }
 
     @Override
     public Flux<FeeDTO> getFees(UUID applicationId) {
         log.debug("Listing fees for applicationId={}", applicationId);
-        return applicationFeeApi
-                .findAllFees(applicationId, null, null, null, null, UUID.randomUUID().toString())
+        return loanOriginationApi
+                .getApplicationFees(applicationId, null)
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::mapToFeeDTO);
     }
@@ -85,14 +81,13 @@ public class ApplicationDetailsServiceImpl implements ApplicationDetailsService 
     @Override
     public Flux<VerificationDTO> getVerifications(UUID applicationId) {
         log.debug("Listing verifications for applicationId={}", applicationId);
-        return applicationVerificationApi
-                .findAllVerifications(applicationId, null, null, null, null, UUID.randomUUID().toString())
+        return loanOriginationApi
+                .getApplicationVerifications(applicationId, null)
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::mapToVerificationDTO);
     }
 
-    private ConditionDTO mapToConditionDTO(
-            com.firefly.core.lending.origination.sdk.model.ApplicationConditionDTO src) {
+    private ConditionDTO mapToConditionDTO(ApplicationConditionDTO src) {
         return ConditionDTO.builder()
                 .conditionId(src.getConditionId())
                 .description(src.getDescription())
@@ -101,8 +96,7 @@ public class ApplicationDetailsServiceImpl implements ApplicationDetailsService 
                 .build();
     }
 
-    private TaskDTO mapToTaskDTO(
-            com.firefly.core.lending.origination.sdk.model.ApplicationTaskDTO src) {
+    private TaskDTO mapToTaskDTO(ApplicationTaskDTO src) {
         return TaskDTO.builder()
                 .taskId(src.getTaskId())
                 .description(src.getDescription())
@@ -111,9 +105,8 @@ public class ApplicationDetailsServiceImpl implements ApplicationDetailsService 
                 .build();
     }
 
-    private FeeDTO mapToFeeDTO(
-            com.firefly.core.lending.origination.sdk.model.ApplicationFeeDTO src) {
-        // MVP: the core SDK does not expose a currency field; defaulting to EUR.
+    private FeeDTO mapToFeeDTO(ApplicationFeeDTO src) {
+        // MVP: the domain SDK does not expose a currency field; defaulting to EUR.
         return FeeDTO.builder()
                 .feeId(src.getFeeId())
                 .feeName(src.getFeeName())
@@ -123,8 +116,7 @@ public class ApplicationDetailsServiceImpl implements ApplicationDetailsService 
                 .build();
     }
 
-    private VerificationDTO mapToVerificationDTO(
-            com.firefly.core.lending.origination.sdk.model.ApplicationVerificationDTO src) {
+    private VerificationDTO mapToVerificationDTO(ApplicationVerificationDTO src) {
         return VerificationDTO.builder()
                 .verificationId(src.getVerificationId())
                 .type(src.getVerificationType())

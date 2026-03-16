@@ -1,7 +1,9 @@
 package com.firefly.experience.lending.core.servicing.services;
 
-import com.firefly.core.lending.servicing.sdk.api.*;
-import com.firefly.core.lending.servicing.sdk.model.*;
+import com.firefly.domain.lending.loan.servicing.sdk.api.LoanServicingApi;
+import com.firefly.domain.lending.loan.servicing.sdk.api.LoanServicingQueriesApi;
+import com.firefly.domain.lending.loan.servicing.sdk.model.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.firefly.experience.lending.core.servicing.commands.RequestEarlyRepaymentCommand;
 import com.firefly.experience.lending.core.servicing.commands.RequestRestructuringCommand;
 import com.firefly.experience.lending.core.servicing.services.impl.LoanServicingServiceImpl;
@@ -17,6 +19,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,61 +31,23 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class LoanServicingServiceImplTest {
 
-    @Mock private LoanServicingCaseApi loanServicingCaseApi;
-    @Mock private LoanBalanceApi loanBalanceApi;
-    @Mock private LoanRepaymentScheduleApi loanRepaymentScheduleApi;
-    @Mock private LoanInstallmentPlanApi loanInstallmentPlanApi;
-    @Mock private LoanInstallmentRecordApi loanInstallmentRecordApi;
-    @Mock private LoanDisbursementApi loanDisbursementApi;
-    @Mock private LoanDisbursementPlanApi loanDisbursementPlanApi;
-    @Mock private LoanRepaymentRecordApi loanRepaymentRecordApi;
-    @Mock private LoanRateChangeApi loanRateChangeApi;
-    @Mock private LoanAccrualApi loanAccrualApi;
-    @Mock private LoanEscrowApi loanEscrowApi;
-    @Mock private LoanRebateApi loanRebateApi;
-    @Mock private LoanRestructuringApi loanRestructuringApi;
-    @Mock private LoanServicingEventApi loanServicingEventApi;
-    @Mock private LoanNotificationApi loanNotificationApi;
+    @Mock private LoanServicingApi loanServicingApi;
+    @Mock private LoanServicingQueriesApi loanServicingQueriesApi;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private LoanServicingServiceImpl service;
 
     @BeforeEach
     void setUp() {
         service = new LoanServicingServiceImpl(
-                loanServicingCaseApi, loanBalanceApi, loanRepaymentScheduleApi,
-                loanInstallmentPlanApi, loanInstallmentRecordApi, loanDisbursementApi,
-                loanDisbursementPlanApi, loanRepaymentRecordApi, loanRateChangeApi,
-                loanAccrualApi, loanEscrowApi, loanRebateApi, loanRestructuringApi,
-                loanServicingEventApi, loanNotificationApi);
+                loanServicingApi, loanServicingQueriesApi, objectMapper);
     }
 
     // --- listLoans ---
 
     @Test
-    void listLoans_mapsServicingCasesToSummaries() {
-        var caseId = UUID.randomUUID();
-        var dto = new LoanServicingCaseDTO(caseId)
-                .servicingStatus(LoanServicingCaseDTO.ServicingStatusEnum.ACTIVE)
-                .principalAmount(new BigDecimal("10000"));
-
-        var page = new PaginationResponseLoanServicingCaseDTO().content(List.of(dto));
-        when(loanServicingCaseApi.findAllServicingCases(any(), any()))
-                .thenReturn(Mono.just(page));
-
-        StepVerifier.create(service.listLoans())
-                .assertNext(summary -> {
-                    assertThat(summary.getLoanId()).isEqualTo(caseId);
-                    assertThat(summary.getStatus()).isEqualTo("ACTIVE");
-                })
-                .verifyComplete();
-    }
-
-    @Test
-    void listLoans_returnsEmpty_whenPageContentIsNull() {
-        var page = new PaginationResponseLoanServicingCaseDTO();
-        when(loanServicingCaseApi.findAllServicingCases(any(), any()))
-                .thenReturn(Mono.just(page));
-
+    void listLoans_returnsEmpty() {
         StepVerifier.create(service.listLoans()).verifyComplete();
     }
 
@@ -92,16 +57,18 @@ class LoanServicingServiceImplTest {
     void getLoan_mapsServicingCaseToDetail() {
         var loanId = UUID.randomUUID();
         var maturity = LocalDate.of(2030, 1, 1);
-        var dto = new LoanServicingCaseDTO(loanId)
-                .servicingStatus(LoanServicingCaseDTO.ServicingStatusEnum.ACTIVE)
-                .principalAmount(new BigDecimal("50000"))
-                .loanTerm(60)
-                .interestRate(new BigDecimal("4.5"))
-                .originationDate(LocalDate.of(2025, 1, 1))
-                .maturityDate(maturity);
+        var responseMap = Map.of(
+                "loanServicingCaseId", loanId.toString(),
+                "servicingStatus", "ACTIVE",
+                "principalAmount", "50000",
+                "loanTerm", "60",
+                "interestRate", "4.5",
+                "originationDate", "2025-01-01",
+                "maturityDate", maturity.toString()
+        );
 
-        when(loanServicingCaseApi.getServicingCaseById(eq(loanId), any()))
-                .thenReturn(Mono.just(dto));
+        when(loanServicingApi.getLoanDetails(eq(loanId.toString()), any()))
+                .thenReturn(Mono.just(responseMap));
 
         StepVerifier.create(service.getLoan(loanId))
                 .assertNext(detail -> {
@@ -117,7 +84,7 @@ class LoanServicingServiceImplTest {
     @Test
     void getLoan_propagatesUpstreamError() {
         var loanId = UUID.randomUUID();
-        when(loanServicingCaseApi.getServicingCaseById(eq(loanId), any()))
+        when(loanServicingApi.getLoanDetails(eq(loanId.toString()), any()))
                 .thenReturn(Mono.error(new RuntimeException("not found")));
 
         StepVerifier.create(service.getLoan(loanId))
@@ -144,7 +111,7 @@ class LoanServicingServiceImplTest {
                 .createdAt(LocalDateTime.now());
 
         var page = new PaginationResponseLoanBalanceDTO().content(List.of(stale, current));
-        when(loanBalanceApi.findAllBalances(eq(loanId), any(), any()))
+        when(loanServicingQueriesApi.getLoanBalances(eq(loanId), isNull()))
                 .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.getBalance(loanId))
@@ -170,7 +137,7 @@ class LoanServicingServiceImplTest {
                 .isPaid(true);
 
         var page = new PaginationResponseLoanRepaymentScheduleDTO().content(List.of(entry));
-        when(loanRepaymentScheduleApi.findAllRepaymentSchedules(eq(loanId), any(), any()))
+        when(loanServicingQueriesApi.getLoanSchedule(eq(loanId), isNull()))
                 .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.getRepaymentSchedule(loanId))
@@ -188,14 +155,15 @@ class LoanServicingServiceImplTest {
     void getInstallments_mapsOverdueStatus_whenDueDatePast() {
         var loanId = UUID.randomUUID();
         var planId = UUID.randomUUID();
-        var plan = new LoanInstallmentPlanDTO(planId, null, null)
+        var plan = new LoanInstallmentPlanDTO()
+                .loanInstallmentPlanId(planId)
                 .installmentNumber(3)
-                .dueDate(LocalDate.of(2024, 1, 1))  // past date → OVERDUE
+                .dueDate(LocalDate.of(2024, 1, 1))  // past date -> OVERDUE
                 .totalDue(new BigDecimal("450"))
                 .isPaid(false);
 
         var page = new PaginationResponseLoanInstallmentPlanDTO().content(List.of(plan));
-        when(loanInstallmentPlanApi.findAllInstallmentPlans(eq(loanId), any(), any()))
+        when(loanServicingQueriesApi.getLoanInstallmentPlan(eq(loanId), isNull()))
                 .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.getInstallments(loanId))
@@ -207,17 +175,19 @@ class LoanServicingServiceImplTest {
     }
 
     @Test
-    void getInstallment_delegatesToGetById() {
+    void getInstallment_delegatesToGetByFilter() {
         var loanId = UUID.randomUUID();
         var installmentId = UUID.randomUUID();
-        var plan = new LoanInstallmentPlanDTO(installmentId, null, null)
+        var plan = new LoanInstallmentPlanDTO()
+                .loanInstallmentPlanId(installmentId)
                 .installmentNumber(2)
                 .dueDate(LocalDate.now().plusMonths(1))
                 .totalDue(new BigDecimal("500"))
                 .isPaid(false);
 
-        when(loanInstallmentPlanApi.getInstallmentPlanById(eq(loanId), eq(installmentId), any()))
-                .thenReturn(Mono.just(plan));
+        var page = new PaginationResponseLoanInstallmentPlanDTO().content(List.of(plan));
+        when(loanServicingQueriesApi.getLoanInstallmentPlan(eq(loanId), isNull()))
+                .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.getInstallment(loanId, installmentId))
                 .assertNext(inst -> {
@@ -233,13 +203,14 @@ class LoanServicingServiceImplTest {
     void getDisbursements_mapsDisbursementStatus() {
         var loanId = UUID.randomUUID();
         var disbId = UUID.randomUUID();
-        var disb = new LoanDisbursementDTO(disbId, null, null)
+        var disb = new LoanDisbursementDTO()
+                .loanDisbursementId(disbId)
                 .disbursementAmount(new BigDecimal("25000"))
                 .disbursementStatus(LoanDisbursementDTO.DisbursementStatusEnum.COMPLETED)
                 .disbursementDate(LocalDate.of(2025, 3, 1));
 
         var page = new PaginationResponseLoanDisbursementDTO().content(List.of(disb));
-        when(loanDisbursementApi.findAllDisbursements(eq(loanId), any(), any()))
+        when(loanServicingQueriesApi.getLoanDisbursements(eq(loanId), isNull()))
                 .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.getDisbursements(loanId))
@@ -254,10 +225,10 @@ class LoanServicingServiceImplTest {
     // --- requestEarlyRepayment ---
 
     @Test
-    void requestEarlyRepayment_createsRepaymentRecord() {
+    void requestEarlyRepayment_callsApplyRepayment() {
         var loanId = UUID.randomUUID();
-        when(loanRepaymentRecordApi.createRepaymentRecord(eq(loanId), any(LoanRepaymentRecordDTO.class), any()))
-                .thenReturn(Mono.just(new LoanRepaymentRecordDTO()));
+        when(loanServicingApi.applyRepayment(eq(loanId.toString()), any(), any()))
+                .thenReturn(Mono.just(new Object()));
 
         var cmd = new RequestEarlyRepaymentCommand();
         cmd.setAmount(new BigDecimal("5000"));
@@ -290,11 +261,10 @@ class LoanServicingServiceImplTest {
     @Test
     void getRateInfo_derivesRateFromServicingCase() {
         var loanId = UUID.randomUUID();
-        var dto = new LoanServicingCaseDTO(loanId)
-                .interestRate(new BigDecimal("3.75"));
+        var responseMap = Map.of("interestRate", "3.75");
 
-        when(loanServicingCaseApi.getServicingCaseById(eq(loanId), any()))
-                .thenReturn(Mono.just(dto));
+        when(loanServicingApi.getLoanDetails(eq(loanId.toString()), any()))
+                .thenReturn(Mono.just(responseMap));
 
         StepVerifier.create(service.getRateInfo(loanId))
                 .assertNext(info -> {
@@ -311,13 +281,14 @@ class LoanServicingServiceImplTest {
     void getAccruals_mapsAccrualFields() {
         var loanId = UUID.randomUUID();
         var accrualId = UUID.randomUUID();
-        var accrual = new LoanAccrualDTO(accrualId)
+        var accrual = new LoanAccrualDTO()
+                .loanAccrualId(accrualId)
                 .accrualAmount(new BigDecimal("12.50"))
                 .accrualDate(LocalDate.of(2025, 3, 31))
                 .createdAt(LocalDateTime.now());
 
         var page = new PaginationResponseLoanAccrualDTO().content(List.of(accrual));
-        when(loanAccrualApi.findAllAccruals(eq(loanId), any(), any()))
+        when(loanServicingQueriesApi.getLoanAccruals(eq(loanId), isNull()))
                 .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.getAccruals(loanId))
@@ -362,15 +333,16 @@ class LoanServicingServiceImplTest {
     // --- requestRestructuring ---
 
     @Test
-    void requestRestructuring_createsRestructuringRecord() {
+    void requestRestructuring_callsApplyRestructure() {
         var loanId = UUID.randomUUID();
         var restructuringId = UUID.randomUUID();
-        var sdkDto = new LoanRestructuringDTO(restructuringId)
-                .reason("Financial hardship")
-                .restructuringDate(LocalDate.now());
+        var responseMap = Map.of(
+                "loanRestructuringId", restructuringId.toString(),
+                "reason", "Financial hardship"
+        );
 
-        when(loanRestructuringApi.createRestructuring(eq(loanId), any(LoanRestructuringDTO.class), any()))
-                .thenReturn(Mono.just(sdkDto));
+        when(loanServicingApi.applyRestructure(eq(loanId.toString()), any(), any()))
+                .thenReturn(Mono.just(responseMap));
 
         var cmd = new RequestRestructuringCommand();
         cmd.setReason("Financial hardship");
@@ -390,13 +362,14 @@ class LoanServicingServiceImplTest {
     void getEvents_mapsServicingEvents() {
         var loanId = UUID.randomUUID();
         var eventId = UUID.randomUUID();
-        var event = new LoanServicingEventDTO(eventId)
+        var event = new LoanServicingEventDTO()
+                .loanServicingEventId(eventId)
                 .eventType(LoanServicingEventDTO.EventTypeEnum.RESTRUCTURE)
                 .description("Restructure applied")
                 .createdAt(LocalDateTime.now());
 
         var page = new PaginationResponseLoanServicingEventDTO().content(List.of(event));
-        when(loanServicingEventApi.findAllServicingEvents(eq(loanId), any(), any()))
+        when(loanServicingQueriesApi.getLoanEvents(eq(loanId), isNull()))
                 .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.getEvents(loanId))

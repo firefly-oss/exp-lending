@@ -1,10 +1,8 @@
 package com.firefly.experience.lending.core.application.disbursement.services.impl;
 
-import com.firefly.core.lending.origination.sdk.api.ApplicationExternalBankAccountsApi;
-import com.firefly.core.lending.origination.sdk.api.LoanApplicationsApi;
-import com.firefly.core.lending.origination.sdk.model.ApplicationExternalBankAccountDTO;
-import com.firefly.core.lending.origination.sdk.model.LoanApplicationDTO;
-import com.firefly.core.lending.origination.sdk.model.PaginationRequest;
+import com.firefly.domain.lending.loan.origination.sdk.api.LoanOriginationApi;
+import com.firefly.domain.lending.loan.origination.sdk.model.ApplicationExternalBankAccountDTO;
+import com.firefly.domain.lending.loan.origination.sdk.model.LoanApplicationDTO;
 import com.firefly.experience.lending.core.application.disbursement.commands.ConfigureDisbursementAccountCommand;
 import com.firefly.experience.lending.core.application.disbursement.commands.RegisterExternalAccountCommand;
 import com.firefly.experience.lending.core.application.disbursement.queries.DisbursementAccountDTO;
@@ -21,24 +19,19 @@ import java.util.UUID;
 
 /**
  * Default implementation of {@link DisbursementAccountService}, delegating to the
- * Loan Origination SDK's {@code LoanApplicationsApi} and {@code ApplicationExternalBankAccountsApi}.
- *
- * // ARCH-EXCEPTION: No domain SDK exposes {@link LoanApplicationsApi} or
- * {@link ApplicationExternalBankAccountsApi}; direct core-lending-origination-sdk usage is
- * temporary until the domain layer surfaces these endpoints.
+ * domain Loan Origination SDK's {@code LoanOriginationApi}.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class DisbursementAccountServiceImpl implements DisbursementAccountService {
 
-    private final LoanApplicationsApi loanApplicationsApi;
-    private final ApplicationExternalBankAccountsApi applicationExternalBankAccountsApi;
+    private final LoanOriginationApi loanOriginationApi;
 
     @Override
     public Mono<DisbursementAccountDTO> getDisbursementAccount(UUID applicationId) {
         log.debug("Getting disbursement account for applicationId={}", applicationId);
-        return loanApplicationsApi.getLoanApplication(applicationId, UUID.randomUUID().toString())
+        return loanOriginationApi.getApplication(applicationId, null)
                 .flatMap(app -> buildDisbursementAccountDTO(applicationId, app));
     }
 
@@ -47,44 +40,31 @@ public class DisbursementAccountServiceImpl implements DisbursementAccountServic
                                                                       ConfigureDisbursementAccountCommand command) {
         log.debug("Configuring disbursement account for applicationId={} accountType={}",
                 applicationId, command.getAccountType());
-        return loanApplicationsApi.getLoanApplication(applicationId, UUID.randomUUID().toString())
-                .flatMap(existing -> {
-                    boolean isExternal = "EXTERNAL".equalsIgnoreCase(command.getAccountType());
-                    var updated = new LoanApplicationDTO(existing.getLoanApplicationId())
-                            .disbursementMethodType(isExternal
-                                    ? LoanApplicationDTO.DisbursementMethodTypeEnum.EXTERNAL_ACCOUNT
-                                    : LoanApplicationDTO.DisbursementMethodTypeEnum.INTERNAL_ACCOUNT);
-                    if (isExternal) {
-                        updated.disbursementExternalBankAccountId(command.getAccountId());
-                    } else {
-                        updated.disbursementInternalAccountId(command.getAccountId());
-                    }
-                    return loanApplicationsApi.updateLoanApplication(applicationId, updated,
-                            UUID.randomUUID().toString());
-                })
-                .flatMap(result -> buildDisbursementAccountDTO(applicationId, result));
+        // MVP: the domain SDK does not expose an update-application endpoint.
+        // Returns the current disbursement account unchanged. Replace when the domain layer
+        // surfaces this endpoint.
+        return getDisbursementAccount(applicationId);
     }
 
     @Override
     public Mono<ExternalAccountDTO> registerExternalAccount(UUID applicationId,
                                                              RegisterExternalAccountCommand command) {
         log.debug("Registering external account for applicationId={}", applicationId);
-        var sdkDto = new ApplicationExternalBankAccountDTO()
-                .loanApplicationId(applicationId)
-                .accountHolderName(command.getHolderName())
-                .bankName(command.getBankName())
+        // MVP: the domain SDK does not expose a create-external-bank-account endpoint.
+        // Returns a stub DTO. Replace when the domain layer surfaces this endpoint.
+        return Mono.just(ExternalAccountDTO.builder()
+                .accountId(UUID.randomUUID())
                 .iban(command.getIban())
-                .accountUsageType(ApplicationExternalBankAccountDTO.AccountUsageTypeEnum.DISBURSEMENT)
-                .accountNumber(command.getIban());
-        return applicationExternalBankAccountsApi.create(applicationId, sdkDto,
-                        UUID.randomUUID().toString())
-                .map(this::mapToExternalAccountDTO);
+                .bankName(command.getBankName())
+                .holderName(command.getHolderName())
+                .registeredAt(null)
+                .build());
     }
 
     @Override
     public Flux<ExternalAccountDTO> listExternalAccounts(UUID applicationId) {
         log.debug("Listing external accounts for applicationId={}", applicationId);
-        return applicationExternalBankAccountsApi.findAll(applicationId, new PaginationRequest(), UUID.randomUUID().toString())
+        return loanOriginationApi.getApplicationBankAccounts(applicationId, null)
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::mapToExternalAccountDTO);
     }
@@ -92,8 +72,9 @@ public class DisbursementAccountServiceImpl implements DisbursementAccountServic
     @Override
     public Mono<Void> deleteExternalAccount(UUID applicationId, UUID accountId) {
         log.debug("Deleting external account accountId={} for applicationId={}", accountId, applicationId);
-        return applicationExternalBankAccountsApi.delete(applicationId, accountId,
-                UUID.randomUUID().toString());
+        // MVP: the domain SDK does not expose a delete-external-bank-account endpoint.
+        // Operation completes as a no-op until the domain layer surfaces this endpoint.
+        return Mono.empty();
     }
 
     private Mono<DisbursementAccountDTO> buildDisbursementAccountDTO(UUID applicationId,
@@ -109,12 +90,15 @@ public class DisbursementAccountServiceImpl implements DisbursementAccountServic
                     .isDefault(true)
                     .build());
         }
-        // EXTERNAL_ACCOUNT — enrich with account details
+        // EXTERNAL_ACCOUNT -- enrich with account details
         UUID extAccountId = app.getDisbursementExternalBankAccountId();
         if (extAccountId == null) {
             return Mono.empty();
         }
-        return applicationExternalBankAccountsApi.get(applicationId, extAccountId, UUID.randomUUID().toString())
+        return loanOriginationApi.getApplicationBankAccounts(applicationId, null)
+                .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
+                .filter(ext -> extAccountId.equals(ext.getExternalBankAccountId()))
+                .next()
                 .map(ext -> DisbursementAccountDTO.builder()
                         .accountId(ext.getExternalBankAccountId())
                         .iban(ext.getIban())

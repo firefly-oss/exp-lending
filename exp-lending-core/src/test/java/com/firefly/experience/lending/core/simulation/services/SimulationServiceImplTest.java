@@ -57,7 +57,7 @@ class SimulationServiceImplTest {
         command.setProductType("PERSONAL_LOAN");
         command.setProductId(productId);
 
-        when(pricingApi.registerPricing(any(RegisterProductPricingCommand.class)))
+        when(pricingApi.registerPricing(any(RegisterProductPricingCommand.class), any()))
                 .thenReturn(Mono.just(apiResponse));
 
         StepVerifier.create(service.createSimulation(command))
@@ -76,7 +76,7 @@ class SimulationServiceImplTest {
         var command = new CreateSimulationCommand();
         command.setProductId(UUID.randomUUID());
 
-        when(pricingApi.registerPricing(any(RegisterProductPricingCommand.class)))
+        when(pricingApi.registerPricing(any(RegisterProductPricingCommand.class), any()))
                 .thenReturn(Mono.error(new RuntimeException("upstream error")));
 
         StepVerifier.create(service.createSimulation(command))
@@ -93,7 +93,7 @@ class SimulationServiceImplTest {
                 "configKey", "MORTGAGE"
         );
 
-        when(pricingApi.amendPricing(eq(simulationId), any(UpdateProductPricingCommand.class)))
+        when(pricingApi.amendPricing(eq(simulationId), any(UpdateProductPricingCommand.class), any()))
                 .thenReturn(Mono.just(apiResponse));
 
         StepVerifier.create(service.getSimulation(simulationId))
@@ -121,7 +121,7 @@ class SimulationServiceImplTest {
         command.setProductId(productId);
         command.setRequestedAmount(new BigDecimal("30000"));
 
-        when(eligibilityApi.evaluateEligibility(eq(productId), any()))
+        when(eligibilityApi.evaluateEligibility(eq(productId), any(), any()))
                 .thenReturn(Mono.just(apiResponse));
 
         StepVerifier.create(service.checkEligibility(command))
@@ -147,7 +147,7 @@ class SimulationServiceImplTest {
         command.setProductId(productId);
         command.setRequestedAmount(new BigDecimal("999999"));
 
-        when(eligibilityApi.evaluateEligibility(eq(productId), any()))
+        when(eligibilityApi.evaluateEligibility(eq(productId), any(), any()))
                 .thenReturn(Mono.just(apiResponse));
 
         StepVerifier.create(service.checkEligibility(command))

@@ -42,7 +42,7 @@ public class ApplicationDetailsServiceImpl implements ApplicationDetailsService 
     public Flux<ConditionDTO> getConditions(UUID applicationId) {
         log.debug("Listing conditions for applicationId={}", applicationId);
         return applicationConditionApi
-                .findAllConditions(applicationId, null, null, null, null, null)
+                .findAllConditions(applicationId, null, null, null, null, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::mapToConditionDTO);
     }
@@ -51,7 +51,7 @@ public class ApplicationDetailsServiceImpl implements ApplicationDetailsService 
     public Flux<TaskDTO> getTasks(UUID applicationId) {
         log.debug("Listing tasks for applicationId={}", applicationId);
         return applicationTaskApi
-                .findAllTasks(applicationId, null, null, null, null, null)
+                .findAllTasks(applicationId, null, null, null, null, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::mapToTaskDTO);
     }
@@ -59,7 +59,7 @@ public class ApplicationDetailsServiceImpl implements ApplicationDetailsService 
     @Override
     public Mono<TaskDTO> completeTask(UUID applicationId, UUID taskId) {
         log.debug("Completing taskId={} for applicationId={}", taskId, applicationId);
-        return applicationTaskApi.getTask(applicationId, taskId, null)
+        return applicationTaskApi.getTask(applicationId, taskId, UUID.randomUUID().toString())
                 .flatMap(existing -> {
                     // Build a fresh update DTO with only the changed fields to avoid live-object mutation.
                     // ARCH-EXCEPTION: core-lending-origination-sdk provides no dedicated UpdateTaskCommand;
@@ -77,7 +77,7 @@ public class ApplicationDetailsServiceImpl implements ApplicationDetailsService 
     public Flux<FeeDTO> getFees(UUID applicationId) {
         log.debug("Listing fees for applicationId={}", applicationId);
         return applicationFeeApi
-                .findAllFees(applicationId, null, null, null, null, null)
+                .findAllFees(applicationId, null, null, null, null, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::mapToFeeDTO);
     }
@@ -86,7 +86,7 @@ public class ApplicationDetailsServiceImpl implements ApplicationDetailsService 
     public Flux<VerificationDTO> getVerifications(UUID applicationId) {
         log.debug("Listing verifications for applicationId={}", applicationId);
         return applicationVerificationApi
-                .findAllVerifications(applicationId, null, null, null, null, null)
+                .findAllVerifications(applicationId, null, null, null, null, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::mapToVerificationDTO);
     }

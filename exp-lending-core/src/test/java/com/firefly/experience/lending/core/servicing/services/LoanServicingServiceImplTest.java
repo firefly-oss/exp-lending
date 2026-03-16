@@ -66,12 +66,7 @@ class LoanServicingServiceImplTest {
                 .principalAmount(new BigDecimal("10000"));
 
         var page = new PaginationResponseLoanServicingCaseDTO().content(List.of(dto));
-        when(loanServicingCaseApi.findAllServicingCases(
-                isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
-                isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
-                isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
-                isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
-                isNull(), isNull(), isNull(), isNull()))
+        when(loanServicingCaseApi.findAllServicingCases(any(), any()))
                 .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.listLoans())
@@ -85,12 +80,7 @@ class LoanServicingServiceImplTest {
     @Test
     void listLoans_returnsEmpty_whenPageContentIsNull() {
         var page = new PaginationResponseLoanServicingCaseDTO();
-        when(loanServicingCaseApi.findAllServicingCases(
-                isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
-                isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
-                isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
-                isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
-                isNull(), isNull(), isNull(), isNull()))
+        when(loanServicingCaseApi.findAllServicingCases(any(), any()))
                 .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.listLoans()).verifyComplete();
@@ -110,7 +100,7 @@ class LoanServicingServiceImplTest {
                 .originationDate(LocalDate.of(2025, 1, 1))
                 .maturityDate(maturity);
 
-        when(loanServicingCaseApi.getServicingCaseById(eq(loanId), isNull()))
+        when(loanServicingCaseApi.getServicingCaseById(eq(loanId), any()))
                 .thenReturn(Mono.just(dto));
 
         StepVerifier.create(service.getLoan(loanId))
@@ -127,7 +117,7 @@ class LoanServicingServiceImplTest {
     @Test
     void getLoan_propagatesUpstreamError() {
         var loanId = UUID.randomUUID();
-        when(loanServicingCaseApi.getServicingCaseById(eq(loanId), isNull()))
+        when(loanServicingCaseApi.getServicingCaseById(eq(loanId), any()))
                 .thenReturn(Mono.error(new RuntimeException("not found")));
 
         StepVerifier.create(service.getLoan(loanId))
@@ -154,9 +144,7 @@ class LoanServicingServiceImplTest {
                 .createdAt(LocalDateTime.now());
 
         var page = new PaginationResponseLoanBalanceDTO().content(List.of(stale, current));
-        when(loanBalanceApi.findAllBalances(eq(loanId), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+        when(loanBalanceApi.findAllBalances(eq(loanId), any(), any()))
                 .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.getBalance(loanId))
@@ -182,10 +170,7 @@ class LoanServicingServiceImplTest {
                 .isPaid(true);
 
         var page = new PaginationResponseLoanRepaymentScheduleDTO().content(List.of(entry));
-        when(loanRepaymentScheduleApi.findAllRepaymentSchedules(eq(loanId), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any()))
+        when(loanRepaymentScheduleApi.findAllRepaymentSchedules(eq(loanId), any(), any()))
                 .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.getRepaymentSchedule(loanId))
@@ -210,10 +195,7 @@ class LoanServicingServiceImplTest {
                 .isPaid(false);
 
         var page = new PaginationResponseLoanInstallmentPlanDTO().content(List.of(plan));
-        when(loanInstallmentPlanApi.findAllInstallmentPlans(eq(loanId), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+        when(loanInstallmentPlanApi.findAllInstallmentPlans(eq(loanId), any(), any()))
                 .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.getInstallments(loanId))
@@ -234,7 +216,7 @@ class LoanServicingServiceImplTest {
                 .totalDue(new BigDecimal("500"))
                 .isPaid(false);
 
-        when(loanInstallmentPlanApi.getInstallmentPlanById(eq(loanId), eq(installmentId), isNull()))
+        when(loanInstallmentPlanApi.getInstallmentPlanById(eq(loanId), eq(installmentId), any()))
                 .thenReturn(Mono.just(plan));
 
         StepVerifier.create(service.getInstallment(loanId, installmentId))
@@ -257,9 +239,7 @@ class LoanServicingServiceImplTest {
                 .disbursementDate(LocalDate.of(2025, 3, 1));
 
         var page = new PaginationResponseLoanDisbursementDTO().content(List.of(disb));
-        when(loanDisbursementApi.findAllDisbursements(eq(loanId), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+        when(loanDisbursementApi.findAllDisbursements(eq(loanId), any(), any()))
                 .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.getDisbursements(loanId))
@@ -313,7 +293,7 @@ class LoanServicingServiceImplTest {
         var dto = new LoanServicingCaseDTO(loanId)
                 .interestRate(new BigDecimal("3.75"));
 
-        when(loanServicingCaseApi.getServicingCaseById(eq(loanId), isNull()))
+        when(loanServicingCaseApi.getServicingCaseById(eq(loanId), any()))
                 .thenReturn(Mono.just(dto));
 
         StepVerifier.create(service.getRateInfo(loanId))
@@ -337,9 +317,7 @@ class LoanServicingServiceImplTest {
                 .createdAt(LocalDateTime.now());
 
         var page = new PaginationResponseLoanAccrualDTO().content(List.of(accrual));
-        when(loanAccrualApi.findAllAccruals(eq(loanId), any(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
-                any(), any()))
+        when(loanAccrualApi.findAllAccruals(eq(loanId), any(), any()))
                 .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.getAccruals(loanId))
@@ -418,9 +396,7 @@ class LoanServicingServiceImplTest {
                 .createdAt(LocalDateTime.now());
 
         var page = new PaginationResponseLoanServicingEventDTO().content(List.of(event));
-        when(loanServicingEventApi.findAllServicingEvents(eq(loanId), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
-                any()))
+        when(loanServicingEventApi.findAllServicingEvents(eq(loanId), any(), any()))
                 .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.getEvents(loanId))

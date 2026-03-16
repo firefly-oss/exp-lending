@@ -47,7 +47,7 @@ public class SimulationServiceImpl implements SimulationService {
                 .configKey(command.getProductType())
                 .configValue(command.getAmount() != null ? command.getAmount().toPlainString() : null);
 
-        return pricingApi.registerPricing(pricingCmd)
+        return pricingApi.registerPricing(pricingCmd, UUID.randomUUID().toString())
                 .map(response -> mapToSimulationResult(response, command.getTerm(), command.getProductType()));
     }
 
@@ -57,7 +57,7 @@ public class SimulationServiceImpl implements SimulationService {
 
         // MVP: domain-product-pricing has no GET by ID; amendPricing with no changes
         // retrieves the current pricing record. Replace when upstream adds a GET endpoint.
-        return pricingApi.amendPricing(simulationId, new UpdateProductPricingCommand())
+        return pricingApi.amendPricing(simulationId, new UpdateProductPricingCommand(), UUID.randomUUID().toString())
                 .map(response -> mapToSimulationResult(response, null, null));
     }
 
@@ -70,7 +70,7 @@ public class SimulationServiceImpl implements SimulationService {
                 "requestedAmount", command.getRequestedAmount()
         );
 
-        return eligibilityApi.evaluateEligibility(command.getProductId(), body)
+        return eligibilityApi.evaluateEligibility(command.getProductId(), body, UUID.randomUUID().toString())
                 .map(this::mapToEligibilityResult);
     }
 

@@ -20,6 +20,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 
@@ -46,12 +47,7 @@ class CollectionsServiceImplTest {
                 .principalAmount(new BigDecimal("5000.00"));
 
         var page = new PaginationResponseLoanServicingCaseDTO().content(List.of(dto));
-        when(loanServicingCaseApi.findAllServicingCases(
-                isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
-                isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
-                isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
-                isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
-                isNull(), isNull(), isNull(), isNull()))
+        when(loanServicingCaseApi.findAllServicingCases(any(), any()))
                 .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.listCollectionCases())
@@ -68,12 +64,7 @@ class CollectionsServiceImplTest {
     @Test
     void listCollectionCases_returnsEmpty_whenPageContentIsNull() {
         var page = new PaginationResponseLoanServicingCaseDTO().content(null);
-        when(loanServicingCaseApi.findAllServicingCases(
-                isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
-                isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
-                isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
-                isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
-                isNull(), isNull(), isNull(), isNull()))
+        when(loanServicingCaseApi.findAllServicingCases(any(), any()))
                 .thenReturn(Mono.just(page));
 
         StepVerifier.create(service.listCollectionCases())
@@ -89,7 +80,7 @@ class CollectionsServiceImplTest {
                 .servicingStatus(LoanServicingCaseDTO.ServicingStatusEnum.DELINQUENT)
                 .principalAmount(new BigDecimal("3200.00"));
 
-        when(loanServicingCaseApi.getServicingCaseById(caseId, null))
+        when(loanServicingCaseApi.getServicingCaseById(eq(caseId), any()))
                 .thenReturn(Mono.just(dto));
 
         StepVerifier.create(service.getCollectionCase(caseId))

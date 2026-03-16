@@ -35,9 +35,7 @@ public class CollectionsServiceImpl implements CollectionsService {
     public Flux<CollectionCaseSummaryDTO> listCollectionCases() {
         log.debug("Listing collection cases");
         return loanServicingCaseApi
-                .findAllServicingCases(null, null, null, null, null, null, null, null, null, null,
-                        null, null, null, null, null, null, null, null, null, null, null, null,
-                        null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+                .findAllServicingCases(null, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toSummary);
     }
@@ -45,7 +43,7 @@ public class CollectionsServiceImpl implements CollectionsService {
     @Override
     public Mono<CollectionCaseDetailDTO> getCollectionCase(UUID caseId) {
         log.debug("Getting collection case caseId={}", caseId);
-        return loanServicingCaseApi.getServicingCaseById(caseId, null)
+        return loanServicingCaseApi.getServicingCaseById(caseId, UUID.randomUUID().toString())
                 .map(this::toDetail);
     }
 

@@ -31,7 +31,7 @@ public class ApplicationDocumentsServiceImpl implements ApplicationDocumentsServ
     public Flux<ApplicationDocumentDTO> listDocuments(UUID applicationId) {
         log.debug("Listing documents for applicationId={}", applicationId);
         return applicationDocumentApi
-                .findAllDocuments(applicationId, null, null, null, null, null)
+                .findAllDocuments(applicationId, null, null, null, null, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::mapToDTO);
     }
@@ -59,7 +59,7 @@ public class ApplicationDocumentsServiceImpl implements ApplicationDocumentsServ
         // Returns empty bytes until ECM integration is wired.
         log.debug("Downloading document documentId={} for applicationId={}", documentId, applicationId);
         return applicationDocumentApi
-                .getDocument(applicationId, documentId, null)
+                .getDocument(applicationId, documentId, UUID.randomUUID().toString())
                 .map(d -> new byte[0]);
     }
 

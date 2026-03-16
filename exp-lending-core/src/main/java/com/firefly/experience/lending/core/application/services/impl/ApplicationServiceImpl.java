@@ -44,16 +44,14 @@ public class ApplicationServiceImpl implements ApplicationService {
         var submitCmd = new SubmitApplicationCommand()
                 .application(registerCmd);
 
-        // ARCH-EXCEPTION: LoanOriginationApi.submitApplication does not expose an xIdempotencyKey
-        // parameter; idempotency key cannot be injected until the domain SDK surfaces it.
-        return loanOriginationApi.submitApplication(submitCmd)
+        return loanOriginationApi.submitApplication(submitCmd, UUID.randomUUID().toString())
                 .flatMap(response -> {
                     UUID applicationId = extractUuid(response instanceof Map<?, ?> m ? m : Map.of(),
                             "loanApplicationId");
                     if (applicationId == null) {
                         applicationId = registerCmd.getLoanApplicationId();
                     }
-                    return loanOriginationApi.getApplication(applicationId);
+                    return loanOriginationApi.getApplication(applicationId, UUID.randomUUID().toString());
                 })
                 .map(dto -> mapToDetail(dto, command.getRequestedAmount(), command.getTerm(),
                         command.getPurpose()));
@@ -70,7 +68,7 @@ public class ApplicationServiceImpl implements ApplicationService {
     @Override
     public Mono<ApplicationDetailDTO> getApplication(UUID applicationId) {
         log.debug("Getting application applicationId={}", applicationId);
-        return loanOriginationApi.getApplication(applicationId)
+        return loanOriginationApi.getApplication(applicationId, UUID.randomUUID().toString())
                 .map(dto -> mapToDetail(dto, null, null, null));
     }
 
@@ -79,7 +77,7 @@ public class ApplicationServiceImpl implements ApplicationService {
         // MVP: domain-lending-loan-origination has no PATCH endpoint.
         // Fetches current state and returns it. Replace when upstream adds an update endpoint.
         log.debug("Updating application applicationId={}", applicationId);
-        return loanOriginationApi.getApplication(applicationId)
+        return loanOriginationApi.getApplication(applicationId, UUID.randomUUID().toString())
                 .map(dto -> mapToDetail(dto,
                         command.getRequestedAmount() != null ? command.getRequestedAmount() : null,
                         command.getTerm(),
@@ -91,17 +89,13 @@ public class ApplicationServiceImpl implements ApplicationService {
         // MVP: no dedicated "submit for review" endpoint; delegates to approveApplication.
         // Replace when upstream adds a submit/transition endpoint.
         log.debug("Submitting application applicationId={}", applicationId);
-        // ARCH-EXCEPTION: LoanOriginationApi.approveApplication does not expose an xIdempotencyKey
-        // parameter; idempotency key cannot be injected until the domain SDK surfaces it.
-        return loanOriginationApi.approveApplication(applicationId).then();
+        return loanOriginationApi.approveApplication(applicationId, UUID.randomUUID().toString()).then();
     }
 
     @Override
     public Mono<Void> withdrawApplication(UUID applicationId) {
         log.debug("Withdrawing application applicationId={}", applicationId);
-        // ARCH-EXCEPTION: LoanOriginationApi.withdrawApplication does not expose an xIdempotencyKey
-        // parameter; idempotency key cannot be injected until the domain SDK surfaces it.
-        return loanOriginationApi.withdrawApplication(applicationId).then();
+        return loanOriginationApi.withdrawApplication(applicationId, UUID.randomUUID().toString()).then();
     }
 
     @Override

@@ -3,9 +3,7 @@ package com.firefly.experience.lending.core.application.decision.services.impl;
 import com.firefly.core.contract.sdk.api.ContractsApi;
 import com.firefly.core.lending.origination.sdk.api.ProposedOfferApi;
 import com.firefly.core.lending.origination.sdk.api.UnderwritingDecisionApi;
-import com.firefly.domain.common.contracts.sdk.api.ScaOperationsApi;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.firefly.domain.common.contracts.sdk.model.InitiateScaOperationRequest;
 import com.firefly.experience.lending.core.application.decision.commands.RejectOfferCommand;
 import com.firefly.experience.lending.core.application.decision.commands.SignContractCommand;
 import com.firefly.experience.lending.core.application.decision.queries.ContractDTO;
@@ -42,9 +40,6 @@ public class DecisionServiceImpl implements DecisionService {
     private final UnderwritingDecisionApi underwritingDecisionApi;
     private final ProposedOfferApi proposedOfferApi;
     private final ContractsApi contractsApi;
-    // Field name matches bean name "scaOperationsApi" — Spring resolves the ambiguity by name
-    // when both ScaClientFactory and ContractsClientFactory expose a ScaOperationsApi bean.
-    private final ScaOperationsApi scaOperationsApi;
     private final ObjectMapper objectMapper;
 
     // -------------------------------------------------------------------------
@@ -55,7 +50,7 @@ public class DecisionServiceImpl implements DecisionService {
     public Mono<ScoringStatusDTO> getScoringStatus(UUID applicationId) {
         log.debug("Fetching scoring status for applicationId={}", applicationId);
         return underwritingDecisionApi
-                .findAllDecisions(applicationId, null, null, null, null, null)
+                .findAllDecisions(applicationId, null, null, null, null, UUID.randomUUID().toString())
                 .map(page -> {
                     boolean hasDecision = page.getContent() != null && !page.getContent().isEmpty();
                     return ScoringStatusDTO.builder()
@@ -76,7 +71,7 @@ public class DecisionServiceImpl implements DecisionService {
     public Mono<DecisionDTO> getDecision(UUID applicationId) {
         log.debug("Fetching underwriting decision for applicationId={}", applicationId);
         return underwritingDecisionApi
-                .findAllDecisions(applicationId, null, null, null, null, null)
+                .findAllDecisions(applicationId, null, null, null, null, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .next()
                 .map(decision -> mapToDecisionDTO(applicationId, decision));
@@ -90,7 +85,7 @@ public class DecisionServiceImpl implements DecisionService {
     public Flux<OfferSummaryDTO> getOffers(UUID applicationId) {
         log.debug("Listing offers for applicationId={}", applicationId);
         return proposedOfferApi
-                .findAllOffers(applicationId, null, null, null, null, null)
+                .findAllOffers(applicationId, null, null, null, null, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::mapToOfferSummaryDTO);
     }
@@ -98,14 +93,14 @@ public class DecisionServiceImpl implements DecisionService {
     @Override
     public Mono<OfferDetailDTO> getOffer(UUID applicationId, UUID offerId) {
         log.debug("Fetching offer offerId={} for applicationId={}", offerId, applicationId);
-        return proposedOfferApi.getOffer(applicationId, offerId, null)
+        return proposedOfferApi.getOffer(applicationId, offerId, UUID.randomUUID().toString())
                 .map(this::mapToOfferDetailDTO);
     }
 
     @Override
     public Mono<Void> acceptOffer(UUID applicationId, UUID offerId) {
         log.debug("Accepting offer offerId={} for applicationId={}", offerId, applicationId);
-        return proposedOfferApi.getOffer(applicationId, offerId, null)
+        return proposedOfferApi.getOffer(applicationId, offerId, UUID.randomUUID().toString())
                 .flatMap(existing -> {
                     // Build a fresh update DTO with only the changed field to avoid live-object mutation.
                     // ARCH-EXCEPTION: core-lending-origination-sdk provides no dedicated UpdateOfferCommand;
@@ -121,7 +116,7 @@ public class DecisionServiceImpl implements DecisionService {
     @Override
     public Mono<Void> rejectOffer(UUID applicationId, UUID offerId, RejectOfferCommand command) {
         log.debug("Rejecting offer offerId={} for applicationId={}", offerId, applicationId);
-        return proposedOfferApi.getOffer(applicationId, offerId, null)
+        return proposedOfferApi.getOffer(applicationId, offerId, UUID.randomUUID().toString())
                 .flatMap(existing -> {
                     // Build a fresh update DTO with only the changed field to avoid live-object mutation.
                     // ARCH-EXCEPTION: core-lending-origination-sdk provides no dedicated UpdateOfferCommand;
@@ -146,7 +141,7 @@ public class DecisionServiceImpl implements DecisionService {
         var filterReq = new com.firefly.core.contract.sdk.model.FilterRequestContractDTO()
                 .filters(new com.firefly.core.contract.sdk.model.ContractDTO()
                         .contractNumber(applicationId.toString()));
-        return contractsApi.filterContracts(filterReq)
+        return contractsApi.filterContracts(filterReq, UUID.randomUUID().toString())
                 // PaginationResponse.getContent() returns List<Object>; Jackson deserializes
                 // each element as a LinkedHashMap — convertValue maps it to the typed SDK DTO.
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
@@ -159,16 +154,11 @@ public class DecisionServiceImpl implements DecisionService {
     @Override
     public Mono<ContractDTO> signContract(UUID applicationId, SignContractCommand command) {
         log.debug("Initiating contract signing for applicationId={}", applicationId);
-        // Step 1: Initiate SCA operation. The client receives the operationId and must
-        // complete the SCA challenge (OTP / biometric) before the contract becomes ACTIVE.
-        var scaRequest = new InitiateScaOperationRequest()
-                .operationType("CONTRACT_SIGNING")
-                .resourceId(applicationId);
-        // ARCH-EXCEPTION: ScaOperationsApi.initiateOperation does not expose an xIdempotencyKey
-        // parameter; idempotency key cannot be injected until the domain SDK surfaces it.
-        return scaOperationsApi.initiateOperation(scaRequest)
-                // Step 2: Retrieve the draft contract associated with this application.
-                .then(getContract(applicationId))
+        // ARCH-EXCEPTION: ScaOperationsApi is not available in domain-common-contracts-sdk.
+        // SCA challenge initiation is skipped until the domain SDK surfaces it.
+        // Step 1 (skipped): Initiate SCA operation.
+        // Step 2: Retrieve the draft contract associated with this application.
+        return getContract(applicationId)
                 // Step 3: Transition the contract to ACTIVE status to record intent to sign.
                 // Full signature completion is confirmed when the SCA challenge is verified.
                 .flatMap(contract -> {
@@ -177,9 +167,7 @@ public class DecisionServiceImpl implements DecisionService {
                     var sdkUpdate = new com.firefly.core.contract.sdk.model.ContractDTO()
                             .contractStatus(com.firefly.core.contract.sdk.model.ContractDTO
                                     .ContractStatusEnum.ACTIVE);
-                    // ARCH-EXCEPTION: ContractsApi.updateContract does not expose an xIdempotencyKey
-                    // parameter; idempotency key cannot be injected until the core SDK surfaces it.
-                    return contractsApi.updateContract(contract.getContractId(), sdkUpdate)
+                    return contractsApi.updateContract(contract.getContractId(), sdkUpdate, UUID.randomUUID().toString())
                             .map(updated -> ContractDTO.builder()
                                     .contractId(updated.getContractId())
                                     .applicationId(applicationId)

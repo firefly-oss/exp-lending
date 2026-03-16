@@ -47,9 +47,9 @@ class ApplicationServiceImplTest {
                 .loanPurpose("PERSONAL")
                 .createdAt(LocalDateTime.now());
 
-        when(loanOriginationApi.submitApplication(any(SubmitApplicationCommand.class)))
+        when(loanOriginationApi.submitApplication(any(SubmitApplicationCommand.class), any()))
                 .thenReturn(Mono.just(submitResponse));
-        when(loanOriginationApi.getApplication(eq(applicationId)))
+        when(loanOriginationApi.getApplication(eq(applicationId), any()))
                 .thenReturn(Mono.just(dto));
 
         var command = new CreateApplicationCommand();
@@ -77,9 +77,9 @@ class ApplicationServiceImplTest {
                 .loanApplicationId(UUID.randomUUID())
                 .createdAt(LocalDateTime.now());
 
-        when(loanOriginationApi.submitApplication(any(SubmitApplicationCommand.class)))
+        when(loanOriginationApi.submitApplication(any(SubmitApplicationCommand.class), any()))
                 .thenReturn(Mono.just(submitResponse));
-        when(loanOriginationApi.getApplication(any(UUID.class)))
+        when(loanOriginationApi.getApplication(any(UUID.class), any()))
                 .thenReturn(Mono.just(dto));
 
         var command = new CreateApplicationCommand();
@@ -93,7 +93,7 @@ class ApplicationServiceImplTest {
 
     @Test
     void createApplication_propagatesUpstreamError() {
-        when(loanOriginationApi.submitApplication(any(SubmitApplicationCommand.class)))
+        when(loanOriginationApi.submitApplication(any(SubmitApplicationCommand.class), any()))
                 .thenReturn(Mono.error(new RuntimeException("upstream error")));
 
         var command = new CreateApplicationCommand();
@@ -119,7 +119,7 @@ class ApplicationServiceImplTest {
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now());
 
-        when(loanOriginationApi.getApplication(eq(applicationId))).thenReturn(Mono.just(dto));
+        when(loanOriginationApi.getApplication(eq(applicationId), any())).thenReturn(Mono.just(dto));
 
         StepVerifier.create(service.getApplication(applicationId))
                 .assertNext(result -> {
@@ -138,7 +138,7 @@ class ApplicationServiceImplTest {
                 .loanPurpose("RENOVATION")
                 .createdAt(LocalDateTime.now());
 
-        when(loanOriginationApi.getApplication(eq(applicationId))).thenReturn(Mono.just(dto));
+        when(loanOriginationApi.getApplication(eq(applicationId), any())).thenReturn(Mono.just(dto));
 
         var command = new UpdateApplicationCommand();
         command.setRequestedAmount(new BigDecimal("20000"));
@@ -157,7 +157,7 @@ class ApplicationServiceImplTest {
     @Test
     void submitApplication_delegatesToApproveApplication() {
         var applicationId = UUID.randomUUID();
-        when(loanOriginationApi.approveApplication(eq(applicationId)))
+        when(loanOriginationApi.approveApplication(eq(applicationId), any()))
                 .thenReturn(Mono.just(Map.of("status", "APPROVED")));
 
         StepVerifier.create(service.submitApplication(applicationId))
@@ -167,7 +167,7 @@ class ApplicationServiceImplTest {
     @Test
     void withdrawApplication_delegatesToWithdrawApplication() {
         var applicationId = UUID.randomUUID();
-        when(loanOriginationApi.withdrawApplication(eq(applicationId)))
+        when(loanOriginationApi.withdrawApplication(eq(applicationId), any()))
                 .thenReturn(Mono.just(Map.of("status", "WITHDRAWN")));
 
         StepVerifier.create(service.withdrawApplication(applicationId))

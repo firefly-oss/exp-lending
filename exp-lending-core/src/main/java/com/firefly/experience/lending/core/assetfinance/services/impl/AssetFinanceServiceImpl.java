@@ -60,7 +60,7 @@ public class AssetFinanceServiceImpl implements AssetFinanceService {
     @Override
     public Mono<AgreementDetailDTO> getAgreement(UUID agreementId) {
         log.debug("Getting asset finance agreement agreementId={}", agreementId);
-        return assetFinanceApi.getAgreement(agreementId)
+        return assetFinanceApi.getAgreement(agreementId, UUID.randomUUID().toString())
                 .map(this::toDetail);
     }
 
@@ -71,7 +71,7 @@ public class AssetFinanceServiceImpl implements AssetFinanceService {
     @Override
     public Flux<FinancedAssetDTO> listAssets(UUID agreementId) {
         log.debug("Listing assets agreementId={}", agreementId);
-        return assetFinanceApi.getAgreementAssets(agreementId)
+        return assetFinanceApi.getAgreementAssets(agreementId, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toAsset);
     }
@@ -79,7 +79,7 @@ public class AssetFinanceServiceImpl implements AssetFinanceService {
     @Override
     public Mono<FinancedAssetDTO> getAsset(UUID agreementId, UUID assetId) {
         log.debug("Getting asset agreementId={} assetId={}", agreementId, assetId);
-        return assetFinanceApi.getAsset(agreementId, assetId)
+        return assetFinanceApi.getAsset(agreementId, assetId, UUID.randomUUID().toString())
                 .map(this::toAssetFromTyped);
     }
 
@@ -90,7 +90,7 @@ public class AssetFinanceServiceImpl implements AssetFinanceService {
     @Override
     public Flux<DeliveryDTO> listDeliveries(UUID agreementId, UUID assetId) {
         log.debug("Listing deliveries agreementId={} assetId={}", agreementId, assetId);
-        return assetFinanceApi.getAssetDeliveries(agreementId, assetId)
+        return assetFinanceApi.getAssetDeliveries(agreementId, assetId, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toDelivery);
     }
@@ -98,7 +98,7 @@ public class AssetFinanceServiceImpl implements AssetFinanceService {
     @Override
     public Mono<DeliveryDTO> getDelivery(UUID agreementId, UUID assetId, UUID deliveryId) {
         log.debug("Getting delivery agreementId={} assetId={} deliveryId={}", agreementId, assetId, deliveryId);
-        return assetFinanceApi.getAssetDeliveries(agreementId, assetId)
+        return assetFinanceApi.getAssetDeliveries(agreementId, assetId, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .filter(item -> deliveryId.equals(extractUuid(toMap(item), "deliveryRecordId")))
                 .next()
@@ -114,7 +114,7 @@ public class AssetFinanceServiceImpl implements AssetFinanceService {
     @Override
     public Flux<ReturnDTO> listReturns(UUID agreementId, UUID assetId) {
         log.debug("Listing returns agreementId={} assetId={}", agreementId, assetId);
-        return assetFinanceApi.getAssetReturns(agreementId, assetId)
+        return assetFinanceApi.getAssetReturns(agreementId, assetId, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toReturn);
     }
@@ -126,7 +126,7 @@ public class AssetFinanceServiceImpl implements AssetFinanceService {
                 .assetFinanceAssetId(assetId)
                 .conditionReport(command.getReason())
                 .isFinalized(false);
-        return assetFinanceApi.registerReturn(agreementId, assetId, dto)
+        return assetFinanceApi.registerReturn(agreementId, assetId, dto, UUID.randomUUID().toString())
                 .map(this::toReturnFromTyped);
     }
 
@@ -137,7 +137,7 @@ public class AssetFinanceServiceImpl implements AssetFinanceService {
     @Override
     public Flux<PickupDTO> listPickups(UUID agreementId, UUID assetId) {
         log.debug("Listing pickups agreementId={} assetId={}", agreementId, assetId);
-        return assetFinanceApi.getAssetPickups(agreementId, assetId)
+        return assetFinanceApi.getAssetPickups(agreementId, assetId, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toPickup);
     }
@@ -149,7 +149,7 @@ public class AssetFinanceServiceImpl implements AssetFinanceService {
     @Override
     public Flux<ServiceEventDTO> listServiceEvents(UUID agreementId, UUID assetId) {
         log.debug("Listing service events agreementId={} assetId={}", agreementId, assetId);
-        return assetFinanceApi.getAssetServiceEvents(agreementId, assetId)
+        return assetFinanceApi.getAssetServiceEvents(agreementId, assetId, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toServiceEvent);
     }
@@ -167,7 +167,7 @@ public class AssetFinanceServiceImpl implements AssetFinanceService {
             sdkDto.eventType(com.firefly.domain.lending.assetfinance.sdk.model.ServiceEventDTO.EventTypeEnum
                     .valueOf(command.getEventType()));
         }
-        return assetFinanceApi.registerServiceEvent(agreementId, assetId, sdkDto)
+        return assetFinanceApi.registerServiceEvent(agreementId, assetId, sdkDto, UUID.randomUUID().toString())
                 .map(this::toServiceEventFromTyped);
     }
 
@@ -178,7 +178,7 @@ public class AssetFinanceServiceImpl implements AssetFinanceService {
     @Override
     public Flux<UsageRecordDTO> listUsage(UUID agreementId, UUID assetId) {
         log.debug("Listing usage records agreementId={} assetId={}", agreementId, assetId);
-        return assetFinanceApi.getAssetUsage(agreementId, assetId)
+        return assetFinanceApi.getAssetUsage(agreementId, assetId, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toUsageRecord);
     }
@@ -193,7 +193,7 @@ public class AssetFinanceServiceImpl implements AssetFinanceService {
         if (command.getMileage() != null) {
             sdkDto.mileage(command.getMileage().intValue());
         }
-        return assetFinanceApi.reportUsage(agreementId, assetId, sdkDto)
+        return assetFinanceApi.reportUsage(agreementId, assetId, sdkDto, UUID.randomUUID().toString())
                 .map(this::toUsageRecordFromTyped);
     }
 
@@ -204,7 +204,7 @@ public class AssetFinanceServiceImpl implements AssetFinanceService {
     @Override
     public Flux<EndOptionDTO> listEndOptions(UUID agreementId) {
         log.debug("Listing end options agreementId={}", agreementId);
-        return assetFinanceApi.getAgreementEndOptions(agreementId)
+        return assetFinanceApi.getAgreementEndOptions(agreementId, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toEndOption);
     }
@@ -216,7 +216,7 @@ public class AssetFinanceServiceImpl implements AssetFinanceService {
                 .assetFinanceAgreementId(agreementId)
                 .isExercised(true)
                 .optionExerciseDate(LocalDate.now());
-        return assetFinanceApi.updateEndOption(agreementId, optionId, sdkDto)
+        return assetFinanceApi.updateEndOption(agreementId, optionId, sdkDto, UUID.randomUUID().toString())
                 .map(this::toEndOptionFromTyped);
     }
 

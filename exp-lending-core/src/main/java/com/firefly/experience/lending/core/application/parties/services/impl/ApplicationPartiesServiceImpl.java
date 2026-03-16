@@ -32,7 +32,7 @@ public class ApplicationPartiesServiceImpl implements ApplicationPartiesService 
     public Flux<ApplicationPartyDTO> listParties(UUID applicationId) {
         log.debug("Listing parties for applicationId={}", applicationId);
         return applicationPartyApi
-                .findAllParties(applicationId, null, null, null, null, null)
+                .findAllParties(applicationId, null, null, null, null, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::mapToDTO);
     }
@@ -55,7 +55,7 @@ public class ApplicationPartiesServiceImpl implements ApplicationPartiesService 
     public Mono<ApplicationPartyDTO> getParty(UUID applicationId, UUID partyId) {
         log.debug("Getting partyId={} for applicationId={}", partyId, applicationId);
         return applicationPartyApi
-                .getParty(applicationId, partyId, null)
+                .getParty(applicationId, partyId, UUID.randomUUID().toString())
                 .map(this::mapToDTO);
     }
 
@@ -64,7 +64,7 @@ public class ApplicationPartiesServiceImpl implements ApplicationPartiesService 
         log.debug("Updating partyId={} for applicationId={}", partyId, applicationId);
         // MVP: fetch existing record, apply role update, then persist.
         // roleCodeId requires a code-table lookup; role string is stored as-is until resolved.
-        return applicationPartyApi.getParty(applicationId, partyId, null)
+        return applicationPartyApi.getParty(applicationId, partyId, UUID.randomUUID().toString())
                 .flatMap(existing -> {
                     // applicationPartyId is server-assigned; it is not settable via the SDK
                     var updated = new com.firefly.core.lending.origination.sdk.model.ApplicationPartyDTO()

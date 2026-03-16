@@ -38,7 +38,7 @@ public class DisbursementAccountServiceImpl implements DisbursementAccountServic
     @Override
     public Mono<DisbursementAccountDTO> getDisbursementAccount(UUID applicationId) {
         log.debug("Getting disbursement account for applicationId={}", applicationId);
-        return loanApplicationsApi.getLoanApplication(applicationId, null)
+        return loanApplicationsApi.getLoanApplication(applicationId, UUID.randomUUID().toString())
                 .flatMap(app -> buildDisbursementAccountDTO(applicationId, app));
     }
 
@@ -47,7 +47,7 @@ public class DisbursementAccountServiceImpl implements DisbursementAccountServic
                                                                       ConfigureDisbursementAccountCommand command) {
         log.debug("Configuring disbursement account for applicationId={} accountType={}",
                 applicationId, command.getAccountType());
-        return loanApplicationsApi.getLoanApplication(applicationId, null)
+        return loanApplicationsApi.getLoanApplication(applicationId, UUID.randomUUID().toString())
                 .flatMap(existing -> {
                     boolean isExternal = "EXTERNAL".equalsIgnoreCase(command.getAccountType());
                     var updated = new LoanApplicationDTO(existing.getLoanApplicationId())
@@ -84,7 +84,7 @@ public class DisbursementAccountServiceImpl implements DisbursementAccountServic
     @Override
     public Flux<ExternalAccountDTO> listExternalAccounts(UUID applicationId) {
         log.debug("Listing external accounts for applicationId={}", applicationId);
-        return applicationExternalBankAccountsApi.findAll(applicationId, new PaginationRequest(), null)
+        return applicationExternalBankAccountsApi.findAll(applicationId, new PaginationRequest(), UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::mapToExternalAccountDTO);
     }
@@ -114,7 +114,7 @@ public class DisbursementAccountServiceImpl implements DisbursementAccountServic
         if (extAccountId == null) {
             return Mono.empty();
         }
-        return applicationExternalBankAccountsApi.get(applicationId, extAccountId, null)
+        return applicationExternalBankAccountsApi.get(applicationId, extAccountId, UUID.randomUUID().toString())
                 .map(ext -> DisbursementAccountDTO.builder()
                         .accountId(ext.getExternalBankAccountId())
                         .iban(ext.getIban())

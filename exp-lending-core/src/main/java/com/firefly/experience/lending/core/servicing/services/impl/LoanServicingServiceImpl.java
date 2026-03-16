@@ -76,9 +76,7 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     public Flux<LoanSummaryDTO> listLoans() {
         log.debug("Listing loan servicing cases");
         return loanServicingCaseApi
-                .findAllServicingCases(null, null, null, null, null, null, null, null, null, null,
-                        null, null, null, null, null, null, null, null, null, null, null, null,
-                        null, null, null, null, null, null, null, null, null, null, null, null, null, null)
+                .findAllServicingCases(null, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toSummary);
     }
@@ -86,7 +84,7 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     @Override
     public Mono<LoanDetailDTO> getLoan(UUID loanId) {
         log.debug("Getting loan loanId={}", loanId);
-        return loanServicingCaseApi.getServicingCaseById(loanId, null)
+        return loanServicingCaseApi.getServicingCaseById(loanId, UUID.randomUUID().toString())
                 .map(this::toDetail);
     }
 
@@ -94,9 +92,7 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     public Mono<BalanceDTO> getBalance(UUID loanId) {
         log.debug("Getting current balance loanId={}", loanId);
         return loanBalanceApi
-                .findAllBalances(loanId, null, null, null, null, null, null, null, null, null,
-                        null, null, null, null, null, null, null, null, null, null, null, null,
-                        null, null, null, null, null, null, null)
+                .findAllBalances(loanId, null, UUID.randomUUID().toString())
                 .map(page -> {
                     List<LoanBalanceDTO> content = page.getContent() != null ? page.getContent() : List.of();
                     // Prefer current snapshot; fall back to first entry
@@ -113,9 +109,7 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     public Mono<BalanceHistoryDTO> getBalanceHistory(UUID loanId) {
         log.debug("Getting balance history loanId={}", loanId);
         return loanBalanceApi
-                .findAllBalances(loanId, null, null, null, null, null, null, null, null, null,
-                        null, null, null, null, null, null, null, null, null, null, null, null,
-                        null, null, null, null, null, null, null)
+                .findAllBalances(loanId, null, UUID.randomUUID().toString())
                 .map(page -> {
                     List<BalanceDTO> entries = page.getContent() != null
                             ? page.getContent().stream().map(this::toBalance).toList()
@@ -128,10 +122,7 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     public Flux<ScheduleEntryDTO> getRepaymentSchedule(UUID loanId) {
         log.debug("Getting repayment schedule loanId={}", loanId);
         return loanRepaymentScheduleApi
-                .findAllRepaymentSchedules(loanId, null, null, null, null, null, null, null, null,
-                        null, null, null, null, null, null, null, null, null, null, null, null,
-                        null, null, null, null, null, null, null, null, null, null, null, null,
-                        null, null, null)
+                .findAllRepaymentSchedules(loanId, null, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toScheduleEntry);
     }
@@ -140,10 +131,7 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     public Flux<InstallmentDTO> getInstallments(UUID loanId) {
         log.debug("Getting installments loanId={}", loanId);
         return loanInstallmentPlanApi
-                .findAllInstallmentPlans(loanId, null, null, null, null, null, null, null, null,
-                        null, null, null, null, null, null, null, null, null, null, null, null,
-                        null, null, null, null, null, null, null, null, null, null, null, null,
-                        null, null, null, null, null, null, null, null)
+                .findAllInstallmentPlans(loanId, null, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toInstallment);
     }
@@ -151,7 +139,7 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     @Override
     public Mono<InstallmentDTO> getInstallment(UUID loanId, UUID installmentId) {
         log.debug("Getting installment loanId={} installmentId={}", loanId, installmentId);
-        return loanInstallmentPlanApi.getInstallmentPlanById(loanId, installmentId, null)
+        return loanInstallmentPlanApi.getInstallmentPlanById(loanId, installmentId, UUID.randomUUID().toString())
                 .map(this::toInstallment);
     }
 
@@ -159,9 +147,7 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     public Flux<InstallmentPaymentDTO> getInstallmentPayments(UUID loanId, UUID installmentId) {
         log.debug("Getting payments for installmentId={} loanId={}", installmentId, loanId);
         return loanInstallmentRecordApi
-                .findAllInstallmentRecords(loanId, null, null, null, null, null, null, null,
-                        installmentId.toString(), null, null, null, null, null, null, null, null,
-                        null, null, null, null, null, null, null, null, null, null)
+                .findAllInstallmentRecords(loanId, null, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toInstallmentPayment);
     }
@@ -170,9 +156,7 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     public Flux<DisbursementDTO> getDisbursements(UUID loanId) {
         log.debug("Getting disbursements loanId={}", loanId);
         return loanDisbursementApi
-                .findAllDisbursements(loanId, null, null, null, null, null, null, null, null, null,
-                        null, null, null, null, null, null, null, null, null, null, null, null,
-                        null, null, null, null, null, null, null)
+                .findAllDisbursements(loanId, null, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toDisbursement);
     }
@@ -180,7 +164,7 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     @Override
     public Mono<DisbursementDTO> getDisbursement(UUID loanId, UUID disbursementId) {
         log.debug("Getting disbursement loanId={} disbursementId={}", loanId, disbursementId);
-        return loanDisbursementApi.getDisbursementById(loanId, disbursementId, null)
+        return loanDisbursementApi.getDisbursementById(loanId, disbursementId, UUID.randomUUID().toString())
                 .map(this::toDisbursement);
     }
 
@@ -196,9 +180,7 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     public Flux<RepaymentDTO> getRepayments(UUID loanId) {
         log.debug("Getting repayments loanId={}", loanId);
         return loanRepaymentRecordApi
-                .findAllRepaymentRecords(loanId, null, null, null, null, null, null, null, null,
-                        null, null, null, null, null, null, null, null, null, null, null, null,
-                        null, null)
+                .findAllRepaymentRecords(loanId, null, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toRepayment);
     }
@@ -233,7 +215,7 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     @Override
     public Mono<RateInfoDTO> getRateInfo(UUID loanId) {
         log.debug("Getting rate info loanId={}", loanId);
-        return loanServicingCaseApi.getServicingCaseById(loanId, null)
+        return loanServicingCaseApi.getServicingCaseById(loanId, UUID.randomUUID().toString())
                 .map(c -> RateInfoDTO.builder()
                         .currentRate(c.getInterestRate())
                         .rateType("FIXED")   // MVP: rate type not stored on LoanServicingCaseDTO
@@ -245,9 +227,7 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     public Flux<RateChangeDTO> getRateChanges(UUID loanId) {
         log.debug("Getting rate changes loanId={}", loanId);
         return loanRateChangeApi
-                .findAllRateChanges(loanId, null, null, null, null, null, null, null, null, null,
-                        null, null, null, null, null, null, null, null, null, null, null, null,
-                        null, null)
+                .findAllRateChanges(loanId, null, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toRateChange);
     }
@@ -256,8 +236,7 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     public Flux<AccrualDTO> getAccruals(UUID loanId) {
         log.debug("Getting accruals loanId={}", loanId);
         return loanAccrualApi
-                .findAllAccruals(loanId, null, null, null, null, null, null, null, null, null,
-                        null, null, null, null, null, null, null, null, null, null, null)
+                .findAllAccruals(loanId, null, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toAccrual);
     }
@@ -294,11 +273,7 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     public Flux<RestructuringDTO> getRestructurings(UUID loanId) {
         log.debug("Getting restructurings loanId={}", loanId);
         return loanRestructuringApi
-                .findAllRestructurings(loanId, null, null, null, null, null, null, null, null,
-                        null, null, null, null, null, null, null, null, null, null, null, null,
-                        null, null, null, null, null, null, null, null, null, null, null, null,
-                        null, null, null, null, null, null, null, null, null, null, null, null,
-                        null, null, null, null)
+                .findAllRestructurings(loanId, null, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toRestructuring);
     }
@@ -315,8 +290,7 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     public Flux<LoanEventDTO> getEvents(UUID loanId) {
         log.debug("Getting servicing events loanId={}", loanId);
         return loanServicingEventApi
-                .findAllServicingEvents(loanId, null, null, null, null, null, null, null, null,
-                        null, null, null, null, null, null, null, null, null)
+                .findAllServicingEvents(loanId, null, UUID.randomUUID().toString())
                 .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
                 .map(this::toEvent);
     }

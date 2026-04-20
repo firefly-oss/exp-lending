@@ -1,6 +1,6 @@
 # exp-lending
 
-> Backend-for-Frontend service for the lending portal — covers loan simulation, application lifecycle, underwriting decisions, contract signing, active loan servicing, asset finance, and collections
+> Backend-for-Frontend service for the lending portal — covers loan simulation, application lifecycle, underwriting decisions, contract signing, active loan servicing, personal loans, asset finance, and collections
 
 ## Table of Contents
 
@@ -18,9 +18,9 @@
 
 `exp-lending` is the experience-layer service that powers all lending-related screens across the digital channel. It covers the full credit lifecycle — from the initial product simulation and eligibility check, through multi-step application management, underwriting decision retrieval, offer selection, SCA-protected contract signing, post-disbursement loan servicing, and asset finance agreement management, down to collections case handling.
 
-The service uses **simple stateless composition** throughout. Every endpoint delegates to one or more downstream domain or core SDK calls, maps the result to an experience-layer DTO, and returns. There is no `@Workflow`, no Redis, and no persistent journey state within this service. The loan application lifecycle (create, update, submit, withdraw) is managed as individual independent SDK calls to the loan origination domain service, with each state transition owned by the domain layer.
+The service uses **simple stateless composition** throughout. Every endpoint delegates to one or more downstream domain SDK calls, maps the result to an experience-layer DTO, and returns. There is no `@Workflow`, no Redis, and no persistent journey state within this service. The loan application lifecycle (create, update, submit, withdraw) is managed as individual independent SDK calls to the loan origination domain service, with each state transition owned by the domain layer.
 
-Given the breadth of the lending domain, the `-core` module is organised by functional vertical (simulation, origination, servicing, asset finance, collections), each with its own package subtree containing service interfaces, implementations, command DTOs, and query DTOs. Ten controllers in the `-web` module expose these verticals over REST, split by resource type to keep each controller focused and maintainable.
+Given the breadth of the lending domain, the `-core` module is organised by functional vertical (simulation, origination, servicing, personal loans, asset finance, collections), each with its own package subtree containing service interfaces, implementations, command DTOs, and query DTOs. Eleven controllers in the `-web` module expose these verticals over REST, split by resource type to keep each controller focused and maintainable.
 
 ## Architecture
 
@@ -32,25 +32,27 @@ exp-lending  (port 8102)
          |
          +---> domain-lending-loan-origination-sdk  (application lifecycle)
          |
-         +---> core-lending-loan-origination-sdk    (application details, documents, parties)
-         |
-         +---> core-lending-loan-servicing-sdk      (active loans, installments, repayments,
+         +---> domain-lending-loan-servicing-sdk    (active loans, installments, repayments,
          |                                           disbursements, escrow, accruals, rebates,
          |                                           restructuring, early repayment)
          |
-         +---> core-lending-credit-scoring-sdk      (scoring status, underwriting decision)
+         +---> domain-lending-credit-scoring-sdk    (scoring status, underwriting decision)
          |
-         +---> core-lending-asset-finance-sdk       (leasing/renting agreements, assets,
+         +---> domain-lending-asset-finance-sdk     (leasing/renting agreements, assets,
          |                                           deliveries, returns, pickups, service
          |                                           events, usage, end options)
          |
-         +---> core-common-contracts-sdk            (contract retrieval and signing)
+         +---> domain-lending-personal-loans-sdk    (personal loan agreement management)
          |
-         +---> core-common-sca-sdk                  (SCA challenge for contract signing)
-         |
-         +---> core-common-notifications-sdk        (loan-related notification history)
+         +---> domain-product-catalog-sdk           (product definitions)
          |
          +---> domain-product-pricing-sdk           (loan simulation, eligibility)
+         |
+         +---> domain-common-contracts-sdk          (contract retrieval and signing)
+         |
+         +---> domain-common-sca-sdk                (SCA challenge for contract signing)
+         |
+         +---> domain-common-notifications-sdk      (loan-related notification history)
 ```
 
 ## Module Structure
@@ -58,9 +60,9 @@ exp-lending  (port 8102)
 | Module | Purpose |
 |--------|---------|
 | `exp-lending-interfaces` | Reserved for future shared contracts |
-| `exp-lending-core` | Service interfaces and implementations per vertical, command and query DTOs, organised by `simulation/`, `application/`, `servicing/`, `assetfinance/`, and `collections/` sub-packages |
+| `exp-lending-core` | Service interfaces and implementations per vertical, command and query DTOs, organised by `simulation/`, `application/`, `servicing/`, `personalloans/`, `assetfinance/`, and `collections/` sub-packages |
 | `exp-lending-infra` | `ClientFactory` beans and `@ConfigurationProperties` for each downstream SDK |
-| `exp-lending-web` | 10 REST controllers (one per vertical), Spring Boot application class, `application.yaml` |
+| `exp-lending-web` | 11 REST controllers (one per vertical), Spring Boot application class, `application.yaml` |
 | `exp-lending-sdk` | Auto-generated reactive SDK from the OpenAPI spec |
 
 ## Functional Verticals
@@ -75,10 +77,11 @@ exp-lending  (port 8102)
 | Decision & Contract | `DecisionController` | `/api/v1/experience/lending/applications/{id}` | 8 |
 | Disbursement Account | `DisbursementAccountController` | `/api/v1/experience/lending/applications/{id}` | 5 |
 | Active Loans | `LoanServicingController` | `/api/v1/experience/lending/loans` | 24 |
+| Personal Loans | `PersonalLoansController` | `/api/v1/experience/lending/personal-loans` | 4 |
 | Asset Finance | `AssetFinanceController` | `/api/v1/experience/lending/asset-finance` | 15 |
 | Collections | `CollectionsController` | `/api/v1/experience/lending/collections` | 3 |
 
-**Total: 79 endpoints across 10 controllers.**
+**Total: 83 endpoints across 11 controllers.**
 
 ## API Endpoints
 
@@ -183,6 +186,15 @@ exp-lending  (port 8102)
 | `GET` | `/api/v1/experience/lending/loans/{id}/events` | Return the servicing event log for the loan | `200 OK` |
 | `GET` | `/api/v1/experience/lending/loans/{id}/notifications` | List all notifications sent in connection with the loan | `200 OK` |
 
+### Personal Loans
+
+| Method | Path | Description | Response |
+|--------|------|-------------|----------|
+| `POST` | `/api/v1/experience/lending/personal-loans` | Create a new personal loan agreement | `201 Created` |
+| `GET` | `/api/v1/experience/lending/personal-loans` | List all personal loan agreements for the current customer | `200 OK` |
+| `GET` | `/api/v1/experience/lending/personal-loans/{agreementId}` | Retrieve full details of a personal loan agreement | `200 OK` / `404 Not Found` |
+| `PUT` | `/api/v1/experience/lending/personal-loans/{agreementId}` | Update an existing personal loan agreement | `200 OK` / `404 Not Found` |
+
 ### Asset Finance
 
 | Method | Path | Description | Response |
@@ -215,15 +227,16 @@ exp-lending  (port 8102)
 
 | SDK | ClientFactory | APIs Used | Purpose |
 |-----|--------------|-----------|---------|
-| `domain-lending-loan-origination-sdk` | `LoanOriginationClientFactory` | Loan application APIs | Application lifecycle — create, update, submit, withdraw, status history |
-| `core-lending-loan-origination-sdk` | `CoreLoanOriginationClientFactory` | Condition, task, fee, verification, party, document APIs | Application sub-resources — conditions, tasks, fees, verifications, documents, parties, disbursement account |
-| `core-lending-loan-servicing-sdk` | `CoreLoanServicingClientFactory` | Loan servicing APIs | Active loan management — balance, schedule, installments, repayments, disbursements, accruals, escrow, rebates, rate changes, restructuring, early repayment |
-| `core-lending-credit-scoring-sdk` | `CreditScoringClientFactory` | Scoring and decision APIs | Credit scoring status and underwriting decision retrieval |
-| `core-lending-asset-finance-sdk` | `AssetFinanceClientFactory` | Agreement, asset, delivery, return, pickup, service event, usage, end option APIs | Asset finance agreement management across the full asset lifecycle |
-| `core-common-contracts-sdk` | `ContractsClientFactory` | Contract and signature APIs | Loan contract retrieval and SCA-protected signing |
-| `core-common-sca-sdk` | `ScaClientFactory` | SCA APIs | Strong Customer Authentication for contract signing |
-| `core-common-notifications-sdk` | `NotificationsClientFactory` | Notifications APIs | Loan-related notification history on active loans |
-| `domain-product-pricing-sdk` | `ProductPricingClientFactory` | Pricing and eligibility APIs | Loan simulation computation and product eligibility checks |
+| `domain-lending-loan-origination-sdk` | `LoanOriginationClientFactory` | `LoanOriginationApi` | Application lifecycle — create, update, submit, withdraw, status history, details, documents, parties, disbursement |
+| `domain-lending-loan-servicing-sdk` | `LoanServicingClientFactory` | `LoanServicingApi`, `LoanServicingQueriesApi` | Active loan management — balance, schedule, installments, repayments, disbursements, accruals, escrow, rebates, rate changes, restructuring, early repayment |
+| `domain-lending-credit-scoring-sdk` | `CreditScoringClientFactory` | `CreditScoringApi` | Credit scoring status and underwriting decision retrieval |
+| `domain-lending-asset-finance-sdk` | `AssetFinanceClientFactory` | `AssetFinanceApi` | Asset finance agreement management — agreements, assets, deliveries, returns, pickups, service events, usage, end options |
+| `domain-lending-personal-loans-sdk` | `PersonalLoansClientFactory` | `PersonalLoansApi` | Personal loan agreement management — create, retrieve, update, list agreements |
+| `domain-product-catalog-sdk` | `ProductCatalogClientFactory` | `ProductsApi` | Product definitions and catalog |
+| `domain-product-pricing-sdk` | `ProductPricingClientFactory` | `PricingApi`, `EligibilityApi`, `FeesApi` | Loan simulation computation and product eligibility checks |
+| `domain-common-contracts-sdk` | `ContractsClientFactory` | `ContractsApi`, `ContractDocumentsApi`, `ContractPartiesApi`, `ContractSignaturesApi`, `ContractTermsApi` | Loan contract retrieval and SCA-protected signing |
+| `domain-common-sca-sdk` | `ScaClientFactory` | *(placeholder — SDK pending)* | Strong Customer Authentication for contract signing |
+| `domain-common-notifications-sdk` | `NotificationsClientFactory` | `NotificationsApi` | Loan-related notification history on active loans |
 
 ## Configuration
 
@@ -235,15 +248,14 @@ api-configuration:
   domain-platform:
     lending-loan-origination:
       base-path: ${LOAN_ORIGINATION_URL:http://localhost:8082}
-  core-platform:
-    lending-loan-origination:
-      base-path: ${CORE_LOAN_ORIGINATION_URL:http://localhost:8081}
     lending-loan-servicing:
       base-path: ${LOAN_SERVICING_URL:http://localhost:8084}
     lending-credit-scoring:
       base-path: ${CREDIT_SCORING_URL:http://localhost:8042}
     lending-asset-finance:
       base-path: ${ASSET_FINANCE_URL:http://localhost:8043}
+    lending-personal-loans:
+      base-path: ${PERSONAL_LOANS_URL:http://localhost:8044}
     product-pricing:
       base-path: ${PRODUCT_PRICING_URL:http://localhost:8086}
     common-contracts:
@@ -260,14 +272,14 @@ api-configuration:
 |----------|---------|-------------|
 | `SERVER_PORT` | `8102` | HTTP server port |
 | `LOAN_ORIGINATION_URL` | `http://localhost:8082` | Base URL for `domain-lending-loan-origination` |
-| `CORE_LOAN_ORIGINATION_URL` | `http://localhost:8081` | Base URL for `core-lending-loan-origination` |
-| `LOAN_SERVICING_URL` | `http://localhost:8084` | Base URL for `core-lending-loan-servicing` |
-| `CREDIT_SCORING_URL` | `http://localhost:8042` | Base URL for `core-lending-credit-scoring` |
-| `ASSET_FINANCE_URL` | `http://localhost:8043` | Base URL for `core-lending-asset-finance` |
+| `LOAN_SERVICING_URL` | `http://localhost:8084` | Base URL for `domain-lending-loan-servicing` |
+| `CREDIT_SCORING_URL` | `http://localhost:8042` | Base URL for `domain-lending-credit-scoring` |
+| `ASSET_FINANCE_URL` | `http://localhost:8043` | Base URL for `domain-lending-asset-finance` |
+| `PERSONAL_LOANS_URL` | `http://localhost:8044` | Base URL for `domain-lending-personal-loans` |
 | `PRODUCT_PRICING_URL` | `http://localhost:8086` | Base URL for `domain-product-pricing` |
-| `CONTRACTS_URL` | `http://localhost:8090` | Base URL for `core-common-contracts` |
-| `SCA_URL` | `http://localhost:8041` | Base URL for `core-common-sca` |
-| `NOTIFICATIONS_URL` | `http://localhost:8095` | Base URL for `core-common-notifications` |
+| `CONTRACTS_URL` | `http://localhost:8090` | Base URL for `domain-common-contracts` |
+| `SCA_URL` | `http://localhost:8041` | Base URL for `domain-common-sca` |
+| `NOTIFICATIONS_URL` | `http://localhost:8095` | Base URL for `domain-common-notifications` |
 
 ## Running Locally
 
@@ -287,4 +299,4 @@ Swagger UI and API docs are disabled in the `pro` profile.
 mvn clean verify
 ```
 
-Tests cover each service implementation in `exp-lending-core` (unit tests with mocked SDK clients using Mockito and `StepVerifier`) and all 10 controllers in `exp-lending-web` (WebTestClient-based tests verifying HTTP status codes and response shapes for all 79 endpoints).
+Tests cover each service implementation in `exp-lending-core` (unit tests with mocked SDK clients using Mockito and `StepVerifier`) and all 11 controllers in `exp-lending-web` (WebTestClient-based tests verifying HTTP status codes and response shapes for all 83 endpoints).

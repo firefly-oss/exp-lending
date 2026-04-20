@@ -80,6 +80,10 @@
         </dependency>
         <dependency>
             <groupId>com.firefly</groupId>
+            <artifactId>domain-lending-personal-loans-sdk</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.firefly</groupId>
             <artifactId>domain-product-catalog-sdk</artifactId>
         </dependency>
         <dependency>

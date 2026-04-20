@@ -17,6 +17,8 @@ api-configuration:
       base-path: ${CREDIT_SCORING_URL:http://localhost:8042}
     lending-asset-finance:
       base-path: ${ASSET_FINANCE_URL:http://localhost:8043}
+    lending-personal-loans:
+      base-path: ${PERSONAL_LOANS_URL:http://localhost:8044}
     product-pricing:
       base-path: ${PRODUCT_PRICING_URL:http://localhost:8086}
     common-contracts:

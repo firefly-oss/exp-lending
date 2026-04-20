@@ -1,3 +1,19 @@
+/*
+ * Copyright 2025 Firefly Software Solutions Inc
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.firefly.experience.lending.web.controllers;
 
 import com.firefly.experience.lending.core.personalloans.commands.CreatePersonalLoanCommand;
@@ -156,12 +172,12 @@ class PersonalLoansControllerTest {
         var agreementId = UUID.randomUUID();
         var detail = PersonalLoanDetailDTO.builder()
                 .agreementId(agreementId)
-                .loanPurpose("VEHICLE_PURCHASE")
+                .loanPurpose("MAJOR_PURCHASE")
                 .status("ACTIVE")
                 .rateType("FIXED")
                 .interestRate(new BigDecimal("6.00"))
-                .insuranceType("BASIC")
-                .earlyRepaymentPenaltyType("FLAT_FEE")
+                .insuranceType("PAYMENT_PROTECTION")
+                .earlyRepaymentPenaltyType("FIXED_FEE")
                 .build();
 
         when(personalLoansService.updateAgreement(eq(agreementId), any(CreatePersonalLoanCommand.class)))
@@ -173,11 +189,11 @@ class PersonalLoansControllerTest {
                 .bodyValue("""
                         {
                             "applicationId": "%s",
-                            "loanPurpose": "VEHICLE_PURCHASE",
+                            "loanPurpose": "MAJOR_PURCHASE",
                             "rateType": "FIXED",
                             "interestRate": 6.00,
-                            "insuranceType": "BASIC",
-                            "earlyRepaymentPenaltyType": "FLAT_FEE"
+                            "insuranceType": "PAYMENT_PROTECTION",
+                            "earlyRepaymentPenaltyType": "FIXED_FEE"
                         }
                         """.formatted(UUID.randomUUID()))
                 .exchange()
@@ -185,7 +201,7 @@ class PersonalLoansControllerTest {
                 .expectBody(PersonalLoanDetailDTO.class)
                 .value(body -> {
                     assertThat(body.getAgreementId()).isEqualTo(agreementId);
-                    assertThat(body.getLoanPurpose()).isEqualTo("VEHICLE_PURCHASE");
+                    assertThat(body.getLoanPurpose()).isEqualTo("MAJOR_PURCHASE");
                     assertThat(body.getInterestRate()).isEqualByComparingTo("6.00");
                 });
     }

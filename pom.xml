@@ -32,6 +32,58 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- External SDKs -->
+            <dependency>
+                <groupId>com.firefly</groupId>
+                <artifactId>domain-lending-personal-loans-sdk</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.firefly</groupId>
+                <artifactId>domain-lending-loan-origination-sdk</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.firefly</groupId>
+                <artifactId>domain-lending-loan-servicing-sdk</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.firefly</groupId>
+                <artifactId>domain-lending-credit-scoring-sdk</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.firefly</groupId>
+                <artifactId>domain-lending-asset-finance-sdk</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.firefly</groupId>
+                <artifactId>domain-product-catalog-sdk</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.firefly</groupId>
+                <artifactId>domain-product-pricing-sdk</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.firefly</groupId>
+                <artifactId>domain-common-contracts-sdk</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.firefly</groupId>
+                <artifactId>domain-common-sca-sdk</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.firefly</groupId>
+                <artifactId>domain-common-notifications-sdk</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <!-- Internal modules -->
             <dependency>
                 <groupId>com.firefly</groupId>
                 <artifactId>exp-lending-core</artifactId>

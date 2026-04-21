@@ -18,6 +18,10 @@ package com.firefly.experience.lending.core.personalloans.services.impl;
 
 import com.firefly.domain.lending.personalloans.sdk.api.PersonalLoansApi;
 import com.firefly.domain.lending.personalloans.sdk.model.PersonalLoanAgreementDTO;
+import com.firefly.domain.lending.personalloans.sdk.model.PersonalLoanAgreementDTO.EarlyRepaymentPenaltyTypeEnum;
+import com.firefly.domain.lending.personalloans.sdk.model.PersonalLoanAgreementDTO.InsuranceTypeEnum;
+import com.firefly.domain.lending.personalloans.sdk.model.PersonalLoanAgreementDTO.LoanPurposeEnum;
+import com.firefly.domain.lending.personalloans.sdk.model.PersonalLoanAgreementDTO.RateTypeEnum;
 import com.firefly.experience.lending.core.personalloans.commands.CreatePersonalLoanCommand;
 import com.firefly.experience.lending.core.personalloans.queries.PersonalLoanDetailDTO;
 import com.firefly.experience.lending.core.personalloans.queries.PersonalLoanSummaryDTO;
@@ -51,13 +55,13 @@ public class PersonalLoansServiceImpl implements PersonalLoansService {
     @Override
     public Mono<PersonalLoanDetailDTO> createAgreement(CreatePersonalLoanCommand command) {
         log.debug("Creating personal loan agreement applicationId={}", command.getApplicationId());
-        var dto = new PersonalLoanAgreementDTO()
+        PersonalLoanAgreementDTO dto = new PersonalLoanAgreementDTO()
                 .applicationId(command.getApplicationId())
-                .loanPurpose(command.getLoanPurpose())
-                .rateType(command.getRateType())
+                .loanPurpose(toEnum(LoanPurposeEnum.class, command.getLoanPurpose()))
+                .rateType(toEnum(RateTypeEnum.class, command.getRateType()))
                 .interestRate(command.getInterestRate())
-                .insuranceType(command.getInsuranceType())
-                .earlyRepaymentPenaltyType(command.getEarlyRepaymentPenaltyType());
+                .insuranceType(toEnum(InsuranceTypeEnum.class, command.getInsuranceType()))
+                .earlyRepaymentPenaltyType(toEnum(EarlyRepaymentPenaltyTypeEnum.class, command.getEarlyRepaymentPenaltyType()));
         return personalLoansApi.createAgreement(dto, UUID.randomUUID().toString())
                 .map(this::toDetail);
     }
@@ -80,13 +84,13 @@ public class PersonalLoansServiceImpl implements PersonalLoansService {
     @Override
     public Mono<PersonalLoanDetailDTO> updateAgreement(UUID agreementId, CreatePersonalLoanCommand command) {
         log.debug("Updating personal loan agreement agreementId={}", agreementId);
-        var dto = new PersonalLoanAgreementDTO()
+        PersonalLoanAgreementDTO dto = new PersonalLoanAgreementDTO()
                 .applicationId(command.getApplicationId())
-                .loanPurpose(command.getLoanPurpose())
-                .rateType(command.getRateType())
+                .loanPurpose(toEnum(LoanPurposeEnum.class, command.getLoanPurpose()))
+                .rateType(toEnum(RateTypeEnum.class, command.getRateType()))
                 .interestRate(command.getInterestRate())
-                .insuranceType(command.getInsuranceType())
-                .earlyRepaymentPenaltyType(command.getEarlyRepaymentPenaltyType());
+                .insuranceType(toEnum(InsuranceTypeEnum.class, command.getInsuranceType()))
+                .earlyRepaymentPenaltyType(toEnum(EarlyRepaymentPenaltyTypeEnum.class, command.getEarlyRepaymentPenaltyType()));
         return personalLoansApi.updateAgreement(agreementId, dto, UUID.randomUUID().toString())
                 .map(this::toDetail);
     }
@@ -100,14 +104,14 @@ public class PersonalLoansServiceImpl implements PersonalLoansService {
                 .agreementId(dto.getPersonalLoanAgreementId())
                 .applicationId(dto.getApplicationId())
                 .servicingCaseId(dto.getServicingCaseId())
-                .loanPurpose(dto.getLoanPurpose())
+                .loanPurpose(enumValue(dto.getLoanPurpose()))
                 .purposeDescription(dto.getPurposeDescription())
                 .status(dto.getAgreementStatus() != null ? dto.getAgreementStatus().getValue() : null)
-                .rateType(dto.getRateType())
+                .rateType(enumValue(dto.getRateType()))
                 .interestRate(dto.getInterestRate())
-                .insuranceType(dto.getInsuranceType())
+                .insuranceType(enumValue(dto.getInsuranceType()))
                 .insurancePremiumRate(dto.getInsurancePremiumRate())
-                .earlyRepaymentPenaltyType(dto.getEarlyRepaymentPenaltyType())
+                .earlyRepaymentPenaltyType(enumValue(dto.getEarlyRepaymentPenaltyType()))
                 .earlyRepaymentPenaltyRate(dto.getEarlyRepaymentPenaltyRate())
                 .isUnsecured(dto.getIsUnsecured())
                 .guarantorRequired(dto.getGuarantorRequired())
@@ -122,9 +126,9 @@ public class PersonalLoansServiceImpl implements PersonalLoansService {
     private PersonalLoanSummaryDTO toSummary(PersonalLoanAgreementDTO dto) {
         return PersonalLoanSummaryDTO.builder()
                 .agreementId(dto.getPersonalLoanAgreementId())
-                .loanPurpose(dto.getLoanPurpose())
+                .loanPurpose(enumValue(dto.getLoanPurpose()))
                 .status(dto.getAgreementStatus() != null ? dto.getAgreementStatus().getValue() : null)
-                .rateType(dto.getRateType())
+                .rateType(enumValue(dto.getRateType()))
                 .interestRate(dto.getInterestRate())
                 .build();
     }
@@ -184,5 +188,25 @@ public class PersonalLoansServiceImpl implements PersonalLoansService {
             try { return LocalDate.parse(s); } catch (Exception e) { return null; }
         }
         return null;
+    }
+
+    // -------------------------------------------------------------------------
+    // Enum conversion helpers
+    // -------------------------------------------------------------------------
+
+    private <E extends Enum<E>> E toEnum(Class<E> enumClass, String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Enum.valueOf(enumClass, value);
+        } catch (IllegalArgumentException e) {
+            log.warn("Unknown enum value '{}' for {}", value, enumClass.getSimpleName());
+            return null;
+        }
+    }
+
+    private String enumValue(Enum<?> enumValue) {
+        return enumValue != null ? enumValue.name() : null;
     }
 }

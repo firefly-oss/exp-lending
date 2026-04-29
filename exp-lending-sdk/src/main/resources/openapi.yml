@@ -1,0 +1,3586 @@
+openapi: 3.0.1
+info:
+  title: OpenAPI definition
+  version: v0
+servers:
+- url: http://localhost:18080
+  description: Generated server url
+tags:
+- name: Personal Loans
+  description: Personal loan agreement management
+paths:
+  /api/v1/experience/lending/personal-loans/{agreementId}:
+    get:
+      tags:
+      - Personal Loans
+      summary: Get Personal Loan Agreement
+      description: Returns full details of a single personal loan agreement.
+      operationId: getAgreement
+      parameters:
+      - name: agreementId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Agreement retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonalLoanDetailDTO"
+        "404":
+          description: Agreement not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonalLoanDetailDTO"
+    put:
+      tags:
+      - Personal Loans
+      summary: Update Personal Loan Agreement
+      description: Updates an existing personal loan agreement.
+      operationId: updateAgreement
+      parameters:
+      - name: agreementId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePersonalLoanCommand"
+        required: true
+      responses:
+        "200":
+          description: Agreement updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonalLoanDetailDTO"
+        "404":
+          description: Agreement not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonalLoanDetailDTO"
+  /api/v1/experience/lending/applications/{id}/parties/{partyId}:
+    get:
+      tags:
+      - Lending - Application Parties
+      summary: Get Party
+      description: Fetches details of a specific party associated with the application.
+      operationId: getParty
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: partyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationPartyDTO"
+    put:
+      tags:
+      - Lending - Application Parties
+      summary: Update Party
+      description: Updates a party's information on a loan application.
+      operationId: updateParty
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: partyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateApplicationPartyCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationPartyDTO"
+    delete:
+      tags:
+      - Lending - Application Parties
+      summary: Remove Party
+      description: Removes a party from a loan application.
+      operationId: removeParty
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: partyId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+  /api/v1/experience/lending/applications/{id}/disbursement-account:
+    get:
+      tags:
+      - Lending - Disbursement Account
+      summary: Get Disbursement Account
+      description: Returns the configured disbursement account for a loan application.
+      operationId: getDisbursementAccount
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DisbursementAccountDTO"
+    put:
+      tags:
+      - Lending - Disbursement Account
+      summary: Configure Disbursement Account
+      description: Sets the disbursement account (internal or external) for a loan
+        application.
+      operationId: configureDisbursementAccount
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigureDisbursementAccountCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DisbursementAccountDTO"
+  /api/v1/experience/lending/simulations:
+    post:
+      tags:
+      - Lending - Simulation & Eligibility
+      summary: Create Simulation
+      description: "Computes a loan simulation for the given amount, term, and product\
+        \ type."
+      operationId: createSimulation
+      parameters:
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSimulationCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimulationResultDTO"
+  /api/v1/experience/lending/personal-loans:
+    get:
+      tags:
+      - Personal Loans
+      summary: List Personal Loan Agreements
+      description: Returns a list of personal loan agreements.
+      operationId: listAgreements
+      parameters:
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Agreements retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PersonalLoanSummaryDTO"
+    post:
+      tags:
+      - Personal Loans
+      summary: Create Personal Loan Agreement
+      description: Creates a new personal loan agreement.
+      operationId: createAgreement
+      parameters:
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePersonalLoanCommand"
+        required: true
+      responses:
+        "201":
+          description: Agreement created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonalLoanDetailDTO"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonalLoanDetailDTO"
+  /api/v1/experience/lending/loans/{id}/restructuring:
+    post:
+      tags:
+      - Lending - Active Loans
+      summary: Request Restructuring
+      description: Submits a restructuring request for the loan.
+      operationId: requestRestructuring
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestRestructuringCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestructuringDTO"
+  /api/v1/experience/lending/loans/{id}/early-repayment/simulation:
+    post:
+      tags:
+      - Lending - Active Loans
+      summary: Simulate Early Repayment
+      description: Returns a cost breakdown for a hypothetical early repayment.
+      operationId: simulateEarlyRepayment
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestEarlyRepaymentCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EarlyRepaymentSimulationDTO"
+  /api/v1/experience/lending/loans/{id}/early-repayment:
+    post:
+      tags:
+      - Lending - Active Loans
+      summary: Request Early Repayment
+      description: Registers a partial or full early repayment against the loan.
+      operationId: requestEarlyRepayment
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestEarlyRepaymentCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+  /api/v1/experience/lending/eligibility:
+    post:
+      tags:
+      - Lending - Simulation & Eligibility
+      summary: Check Eligibility
+      description: Evaluates whether a party is eligible for a given product and requested
+        amount.
+      operationId: checkEligibility
+      parameters:
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckEligibilityCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EligibilityResultDTO"
+  /api/v1/experience/lending/collections/{id}/promise-to-pay:
+    post:
+      tags:
+      - Lending - Collections
+      summary: Register Payment Promise
+      description: Records a promise-to-pay agreement against a collection case.
+      operationId: registerPaymentPromise
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterPaymentPromiseCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentPromiseDTO"
+  /api/v1/experience/lending/asset-finance/{id}/end-options/{optId}/exercise:
+    post:
+      tags:
+      - Lending - Asset Finance
+      summary: Exercise End Option
+      description: "Exercises a lease-end option (e.g., purchase the asset). Marks\
+        \ the option as exercised in the domain service."
+      operationId: exerciseEndOption
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: optId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EndOptionDTO"
+  /api/v1/experience/lending/asset-finance/{id}/assets/{assetId}/usage:
+    get:
+      tags:
+      - Lending - Asset Finance
+      summary: List Usage Records
+      description: Returns all usage records (mileage snapshots) for the given asset.
+      operationId: listUsage
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: assetId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UsageRecordDTO"
+    post:
+      tags:
+      - Lending - Asset Finance
+      summary: Report Usage
+      description: Records a new usage snapshot (e.g. mileage reading) for the given
+        asset.
+      operationId: reportUsage
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: assetId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportUsageCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsageRecordDTO"
+  /api/v1/experience/lending/asset-finance/{id}/assets/{assetId}/service-events:
+    get:
+      tags:
+      - Lending - Asset Finance
+      summary: List Service Events
+      description: "Returns all service events (maintenance, damage, inspection) for\
+        \ the given asset."
+      operationId: listServiceEvents
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: assetId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ServiceEventDTO"
+    post:
+      tags:
+      - Lending - Asset Finance
+      summary: Report Service Event
+      description: "Records a new service event (maintenance, damage, or inspection)\
+        \ for the given asset."
+      operationId: reportServiceEvent
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: assetId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportServiceEventCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceEventDTO"
+  /api/v1/experience/lending/asset-finance/{id}/assets/{assetId}/returns:
+    get:
+      tags:
+      - Lending - Asset Finance
+      summary: List Returns
+      description: Returns all return records for the given asset.
+      operationId: listReturns
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: assetId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReturnDTO"
+    post:
+      tags:
+      - Lending - Asset Finance
+      summary: Request Return
+      description: Initiates a return process for the given asset. Returns the created
+        return record.
+      operationId: requestReturn
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: assetId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestReturnCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReturnDTO"
+  /api/v1/experience/lending/applications/{id}/withdraw:
+    post:
+      tags:
+      - Lending - Applications
+      summary: Withdraw Application
+      description: Withdraws the application at the applicant's request.
+      operationId: withdrawApplication
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+  /api/v1/experience/lending/applications/{id}/submission:
+    post:
+      tags:
+      - Lending - Applications
+      summary: Submit Application
+      description: Submits the application for underwriting review.
+      operationId: submitApplication
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+  /api/v1/experience/lending/applications/{id}/parties:
+    get:
+      tags:
+      - Lending - Application Parties
+      summary: List Parties
+      description: Returns all parties associated with a loan application.
+      operationId: listParties
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApplicationPartyDTO"
+    post:
+      tags:
+      - Lending - Application Parties
+      summary: Add Party
+      description: "Associates a new party (co-holder, guarantor, etc.) with a loan\
+        \ application."
+      operationId: addParty
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddApplicationPartyCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationPartyDTO"
+  /api/v1/experience/lending/applications/{id}/offers/{offerId}/reject:
+    post:
+      tags:
+      - Lending - Decision & Contract
+      summary: Reject Offer
+      description: Marks the specified offer as REJECTED. An optional reason may be
+        provided.
+      operationId: rejectOffer
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: offerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RejectOfferCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+  /api/v1/experience/lending/applications/{id}/offers/{offerId}/accept:
+    post:
+      tags:
+      - Lending - Decision & Contract
+      summary: Accept Offer
+      description: Marks the specified offer as ACCEPTED. Only one offer per application
+        may be accepted.
+      operationId: acceptOffer
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: offerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+  /api/v1/experience/lending/applications/{id}/external-accounts:
+    get:
+      tags:
+      - Lending - Disbursement Account
+      summary: List External Accounts
+      description: Returns all external bank accounts registered for a loan application.
+      operationId: listExternalAccounts
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExternalAccountDTO"
+    post:
+      tags:
+      - Lending - Disbursement Account
+      summary: Register External Account
+      description: Registers a new external bank account for disbursement on a loan
+        application.
+      operationId: registerExternalAccount
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterExternalAccountCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExternalAccountDTO"
+  /api/v1/experience/lending/applications/{id}/documents:
+    get:
+      tags:
+      - Lending - Application Documents
+      summary: List Documents
+      description: Returns all documents attached to a loan application.
+      operationId: listDocuments
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApplicationDocumentDTO"
+    post:
+      tags:
+      - Lending - Application Documents
+      summary: Upload Document
+      description: Attaches a new document to a loan application.
+      operationId: uploadDocument
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadDocumentCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationDocumentDTO"
+  /api/v1/experience/lending/applications/{id}/contract/sign:
+    post:
+      tags:
+      - Lending - Decision & Contract
+      summary: Sign Contract
+      description: Initiates the SCA (Strong Customer Authentication) flow for contract
+        signing and transitions the contract to ACTIVE status. The client must complete
+        the SCA challenge to finalise the signature.
+      operationId: signContract
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignContractCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractDTO"
+  /api/v1/experience/lending/applications:
+    get:
+      tags:
+      - Lending - Applications
+      summary: List Applications
+      description: Returns all loan applications accessible to the caller.
+      operationId: listApplications
+      parameters:
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApplicationSummaryDTO"
+    post:
+      tags:
+      - Lending - Applications
+      summary: Create Application
+      description: "Creates a new loan application for the given product, amount,\
+        \ term, and purpose."
+      operationId: createApplication
+      parameters:
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateApplicationCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationDetailDTO"
+  /api/v1/experience/lending/applications/{id}/tasks/{taskId}:
+    patch:
+      tags:
+      - Lending - Application Details
+      summary: Complete Task
+      description: Marks an application task as COMPLETED.
+      operationId: completeTask
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: taskId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskDTO"
+  /api/v1/experience/lending/applications/{id}:
+    get:
+      tags:
+      - Lending - Applications
+      summary: Get Application
+      description: Retrieves the full details of a loan application by its identifier.
+      operationId: getApplication
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationDetailDTO"
+    patch:
+      tags:
+      - Lending - Applications
+      summary: Update Application
+      description: Updates editable fields of a loan application.
+      operationId: updateApplication
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateApplicationCommand"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationDetailDTO"
+  /api/v1/experience/lending/simulations/{id}:
+    get:
+      tags:
+      - Lending - Simulation & Eligibility
+      summary: Get Simulation
+      description: Retrieves a previously created loan simulation by its identifier.
+      operationId: getSimulation
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimulationResultDTO"
+  /api/v1/experience/lending/loans/{id}/schedule:
+    get:
+      tags:
+      - Lending - Active Loans
+      summary: Get Repayment Schedule
+      description: Returns the full amortisation schedule for the loan.
+      operationId: getRepaymentSchedule
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScheduleEntryDTO"
+  /api/v1/experience/lending/loans/{id}/restructurings:
+    get:
+      tags:
+      - Lending - Active Loans
+      summary: List Restructurings
+      description: Returns the history of restructuring requests for the loan.
+      operationId: getRestructurings
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RestructuringDTO"
+  /api/v1/experience/lending/loans/{id}/repayments:
+    get:
+      tags:
+      - Lending - Active Loans
+      summary: List Repayments
+      description: Returns all repayment records for the loan.
+      operationId: getRepayments
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RepaymentDTO"
+  /api/v1/experience/lending/loans/{id}/rebates:
+    get:
+      tags:
+      - Lending - Active Loans
+      summary: List Rebates
+      description: Returns all rebate records applied to the loan.
+      operationId: getRebates
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RebateDTO"
+  /api/v1/experience/lending/loans/{id}/rate-info:
+    get:
+      tags:
+      - Lending - Active Loans
+      summary: Get Rate Info
+      description: Returns the current interest rate and type for the loan.
+      operationId: getRateInfo
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateInfoDTO"
+  /api/v1/experience/lending/loans/{id}/rate-changes:
+    get:
+      tags:
+      - Lending - Active Loans
+      summary: List Rate Changes
+      description: Returns the history of interest rate changes for the loan.
+      operationId: getRateChanges
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RateChangeDTO"
+  /api/v1/experience/lending/loans/{id}/notifications:
+    get:
+      tags:
+      - Lending - Active Loans
+      summary: List Notifications
+      description: Returns all notifications sent in connection with the loan.
+      operationId: getNotifications
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LoanNotificationDTO"
+  /api/v1/experience/lending/loans/{id}/installments/{instId}/payments:
+    get:
+      tags:
+      - Lending - Active Loans
+      summary: Get Installment Payments
+      description: Returns payment records linked to a specific installment.
+      operationId: getInstallmentPayments
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: instId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InstallmentPaymentDTO"
+  /api/v1/experience/lending/loans/{id}/installments/{instId}:
+    get:
+      tags:
+      - Lending - Active Loans
+      summary: Get Installment
+      description: Returns a single installment plan entry.
+      operationId: getInstallment
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: instId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstallmentDTO"
+  /api/v1/experience/lending/loans/{id}/installments:
+    get:
+      tags:
+      - Lending - Active Loans
+      summary: List Installments
+      description: Returns all installment plan entries for the loan.
+      operationId: getInstallments
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InstallmentDTO"
+  /api/v1/experience/lending/loans/{id}/events:
+    get:
+      tags:
+      - Lending - Active Loans
+      summary: List Events
+      description: Returns the servicing event log for the loan.
+      operationId: getEvents
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LoanEventDTO"
+  /api/v1/experience/lending/loans/{id}/escrow:
+    get:
+      tags:
+      - Lending - Active Loans
+      summary: List Escrow Accounts
+      description: Returns all escrow accounts associated with the loan.
+      operationId: getEscrow
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EscrowDTO"
+  /api/v1/experience/lending/loans/{id}/documents:
+    get:
+      tags:
+      - Lending - Active Loans
+      summary: List Documents
+      description: Returns all documents attached to the loan.
+      operationId: getDocuments
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LoanDocumentDTO"
+  /api/v1/experience/lending/loans/{id}/disbursements/{dId}:
+    get:
+      tags:
+      - Lending - Active Loans
+      summary: Get Disbursement
+      description: Returns a single disbursement record.
+      operationId: getDisbursement
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: dId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DisbursementDTO"
+  /api/v1/experience/lending/loans/{id}/disbursements:
+    get:
+      tags:
+      - Lending - Active Loans
+      summary: List Disbursements
+      description: Returns all disbursement records for the loan.
+      operationId: getDisbursements
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DisbursementDTO"
+  /api/v1/experience/lending/loans/{id}/disbursement-plan:
+    get:
+      tags:
+      - Lending - Active Loans
+      summary: Get Disbursement Plan
+      description: Returns the disbursement plan for the loan.
+      operationId: getDisbursementPlan
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DisbursementPlanDTO"
+  /api/v1/experience/lending/loans/{id}/balance/history:
+    get:
+      tags:
+      - Lending - Active Loans
+      summary: Get Balance History
+      description: Returns the full balance snapshot history for the loan.
+      operationId: getBalanceHistory
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BalanceHistoryDTO"
+  /api/v1/experience/lending/loans/{id}/balance:
+    get:
+      tags:
+      - Lending - Active Loans
+      summary: Get Balance
+      description: Returns the current outstanding balance for the loan.
+      operationId: getBalance
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BalanceDTO"
+  /api/v1/experience/lending/loans/{id}/accruals:
+    get:
+      tags:
+      - Lending - Active Loans
+      summary: List Accruals
+      description: Returns all interest accrual records for the loan.
+      operationId: getAccruals
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AccrualDTO"
+  /api/v1/experience/lending/loans/{id}:
+    get:
+      tags:
+      - Lending - Active Loans
+      summary: Get Loan
+      description: Retrieves full details of an active loan by its identifier.
+      operationId: getLoan
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoanDetailDTO"
+  /api/v1/experience/lending/loans:
+    get:
+      tags:
+      - Lending - Active Loans
+      summary: List Active Loans
+      description: Returns all active loan servicing cases accessible to the caller.
+      operationId: listLoans
+      parameters:
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LoanSummaryDTO"
+  /api/v1/experience/lending/collections/{id}:
+    get:
+      tags:
+      - Lending - Collections
+      summary: Get Collection Case
+      description: Retrieves full details of a collection case including its actions.
+      operationId: getCollectionCase
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollectionCaseDetailDTO"
+  /api/v1/experience/lending/collections:
+    get:
+      tags:
+      - Lending - Collections
+      summary: List Collection Cases
+      description: Returns all active collection cases accessible to the caller.
+      operationId: listCollectionCases
+      parameters:
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CollectionCaseSummaryDTO"
+  /api/v1/experience/lending/asset-finance/{id}/end-options:
+    get:
+      tags:
+      - Lending - Asset Finance
+      summary: List End Options
+      description: "Returns all end-of-term options (purchase, return, extend) for\
+        \ the agreement."
+      operationId: listEndOptions
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EndOptionDTO"
+  /api/v1/experience/lending/asset-finance/{id}/assets/{assetId}/pickups:
+    get:
+      tags:
+      - Lending - Asset Finance
+      summary: List Pickups
+      description: Returns all pickup records for the given asset.
+      operationId: listPickups
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: assetId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PickupDTO"
+  /api/v1/experience/lending/asset-finance/{id}/assets/{assetId}/deliveries/{dId}:
+    get:
+      tags:
+      - Lending - Asset Finance
+      summary: Get Delivery
+      description: Returns details of a single delivery record.
+      operationId: getDelivery
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: assetId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: dId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryDTO"
+  /api/v1/experience/lending/asset-finance/{id}/assets/{assetId}/deliveries:
+    get:
+      tags:
+      - Lending - Asset Finance
+      summary: List Deliveries
+      description: Returns all delivery records for the given asset.
+      operationId: listDeliveries
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: assetId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DeliveryDTO"
+  /api/v1/experience/lending/asset-finance/{id}/assets/{assetId}:
+    get:
+      tags:
+      - Lending - Asset Finance
+      summary: Get Asset
+      description: Returns details of a single financed asset.
+      operationId: getAsset
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: assetId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancedAssetDTO"
+  /api/v1/experience/lending/asset-finance/{id}/assets:
+    get:
+      tags:
+      - Lending - Asset Finance
+      summary: List Assets
+      description: Returns all financed assets associated with the agreement.
+      operationId: listAssets
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FinancedAssetDTO"
+  /api/v1/experience/lending/asset-finance/{id}:
+    get:
+      tags:
+      - Lending - Asset Finance
+      summary: Get Asset Finance Agreement
+      description: Returns full details of a single asset finance agreement.
+      operationId: getAgreement_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgreementDetailDTO"
+  /api/v1/experience/lending/asset-finance:
+    get:
+      tags:
+      - Lending - Asset Finance
+      summary: List Asset Finance Agreements
+      description: Returns a list of asset finance agreements (leasing and renting).
+      operationId: listAgreements_1
+      parameters:
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AgreementSummaryDTO"
+  /api/v1/experience/lending/applications/{id}/verifications:
+    get:
+      tags:
+      - Lending - Application Details
+      summary: List Verifications
+      description: Returns all verifications associated with a loan application.
+      operationId: getVerifications
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VerificationDTO"
+  /api/v1/experience/lending/applications/{id}/tasks:
+    get:
+      tags:
+      - Lending - Application Details
+      summary: List Tasks
+      description: Returns all tasks associated with a loan application.
+      operationId: getTasks
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TaskDTO"
+  /api/v1/experience/lending/applications/{id}/status-history:
+    get:
+      tags:
+      - Lending - Applications
+      summary: Get Status History
+      description: Returns the full status transition history for a loan application.
+      operationId: getStatusHistory
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationStatusHistoryDTO"
+  /api/v1/experience/lending/applications/{id}/scoring-status:
+    get:
+      tags:
+      - Lending - Decision & Contract
+      summary: Get Scoring Status
+      description: "Returns the current credit scoring status for a loan application.\
+        \ Status transitions: PENDING → IN_PROGRESS → COMPLETED."
+      operationId: getScoringStatus
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScoringStatusDTO"
+  /api/v1/experience/lending/applications/{id}/offers/{offerId}:
+    get:
+      tags:
+      - Lending - Decision & Contract
+      summary: Get Offer Detail
+      description: "Returns the full detail of a specific offer, including total cost,\
+        \ itemised fees, and attached conditions."
+      operationId: getOffer
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: offerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferDetailDTO"
+  /api/v1/experience/lending/applications/{id}/offers:
+    get:
+      tags:
+      - Lending - Decision & Contract
+      summary: List Offers
+      description: Returns all proposed loan offers for the application.
+      operationId: getOffers
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OfferSummaryDTO"
+  /api/v1/experience/lending/applications/{id}/fees:
+    get:
+      tags:
+      - Lending - Application Details
+      summary: List Fees
+      description: Returns all fees associated with a loan application.
+      operationId: getFees
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FeeDTO"
+  /api/v1/experience/lending/applications/{id}/documents/{docId}:
+    get:
+      tags:
+      - Lending - Application Documents
+      summary: Download Document
+      description: Downloads the binary content of an application document.
+      operationId: downloadDocument
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: docId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: byte
+    delete:
+      tags:
+      - Lending - Application Documents
+      summary: Delete Document
+      description: Removes a document from a loan application.
+      operationId: deleteDocument
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: docId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+  /api/v1/experience/lending/applications/{id}/decision:
+    get:
+      tags:
+      - Lending - Decision & Contract
+      summary: Get Underwriting Decision
+      description: "Returns the underwriting decision (APPROVED, REJECTED, or CONDITIONAL)\
+        \ and the reason codes for the outcome."
+      operationId: getDecision
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecisionDTO"
+  /api/v1/experience/lending/applications/{id}/contract:
+    get:
+      tags:
+      - Lending - Decision & Contract
+      summary: Get Contract
+      description: "Returns the loan contract associated with this application, including\
+        \ its current status and document reference."
+      operationId: getContract
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractDTO"
+  /api/v1/experience/lending/applications/{id}/conditions:
+    get:
+      tags:
+      - Lending - Application Details
+      summary: List Conditions
+      description: Returns all conditions associated with a loan application.
+      operationId: getConditions
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ConditionDTO"
+  /api/v1/experience/lending/applications/{id}/external-accounts/{accId}:
+    delete:
+      tags:
+      - Lending - Disbursement Account
+      summary: Delete External Account
+      description: Removes an external bank account from a loan application.
+      operationId: deleteExternalAccount
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: accId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+components:
+  schemas:
+    CreatePersonalLoanCommand:
+      type: object
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+        loanPurpose:
+          type: string
+        rateType:
+          type: string
+        interestRate:
+          type: number
+        insuranceType:
+          type: string
+        earlyRepaymentPenaltyType:
+          type: string
+    PersonalLoanDetailDTO:
+      type: object
+      properties:
+        agreementId:
+          type: string
+          format: uuid
+        loanPurpose:
+          type: string
+        status:
+          type: string
+        rateType:
+          type: string
+        interestRate:
+          type: number
+        applicationId:
+          type: string
+          format: uuid
+        servicingCaseId:
+          type: string
+          format: uuid
+        purposeDescription:
+          type: string
+        insuranceType:
+          type: string
+        insurancePremiumRate:
+          type: number
+        earlyRepaymentPenaltyType:
+          type: string
+        earlyRepaymentPenaltyRate:
+          type: number
+        isUnsecured:
+          type: boolean
+        guarantorRequired:
+          type: boolean
+        coolingOffPeriodDays:
+          type: integer
+          format: int32
+        originationFeeRate:
+          type: number
+        originationFeeAmount:
+          type: number
+        agreementSignedDate:
+          type: string
+          format: date
+        agreementEffectiveDate:
+          type: string
+          format: date
+    UpdateApplicationPartyCommand:
+      type: object
+      properties:
+        role:
+          type: string
+    ApplicationPartyDTO:
+      type: object
+      properties:
+        partyId:
+          type: string
+          format: uuid
+        applicationId:
+          type: string
+          format: uuid
+        role:
+          type: string
+        fullName:
+          type: string
+        identificationNumber:
+          type: string
+        addedAt:
+          type: string
+          format: date-time
+    ConfigureDisbursementAccountCommand:
+      type: object
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        accountType:
+          type: string
+    DisbursementAccountDTO:
+      type: object
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        iban:
+          type: string
+        bankName:
+          type: string
+        accountType:
+          type: string
+        default:
+          type: boolean
+    CreateSimulationCommand:
+      type: object
+      properties:
+        amount:
+          type: number
+        term:
+          type: integer
+          format: int32
+        productType:
+          type: string
+        productId:
+          type: string
+          format: uuid
+    SimulationResultDTO:
+      type: object
+      properties:
+        simulationId:
+          type: string
+          format: uuid
+        monthlyPayment:
+          type: number
+        annualRate:
+          type: number
+        totalCost:
+          type: number
+        term:
+          type: integer
+          format: int32
+        productType:
+          type: string
+    RequestRestructuringCommand:
+      type: object
+      properties:
+        reason:
+          type: string
+        requestedTermChanges:
+          type: string
+    RestructuringDTO:
+      type: object
+      properties:
+        restructuringId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        requestedAt:
+          type: string
+          format: date-time
+        newTerms:
+          type: string
+    RequestEarlyRepaymentCommand:
+      type: object
+      properties:
+        amount:
+          type: number
+        type:
+          type: string
+    EarlyRepaymentSimulationDTO:
+      type: object
+      properties:
+        totalAmount:
+          type: number
+        penaltyAmount:
+          type: number
+        savings:
+          type: number
+    CheckEligibilityCommand:
+      type: object
+      properties:
+        partyId:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        requestedAmount:
+          type: number
+    EligibilityResultDTO:
+      type: object
+      properties:
+        evaluationId:
+          type: string
+          format: uuid
+        eligible:
+          type: boolean
+        maxAmount:
+          type: number
+        reasons:
+          type: array
+          items:
+            type: string
+    RegisterPaymentPromiseCommand:
+      type: object
+      properties:
+        promisedAmount:
+          type: number
+        promiseDate:
+          type: string
+          format: date
+    PaymentPromiseDTO:
+      type: object
+      properties:
+        promiseId:
+          type: string
+          format: uuid
+        promisedAmount:
+          type: number
+        promiseDate:
+          type: string
+          format: date
+        status:
+          type: string
+    EndOptionDTO:
+      type: object
+      properties:
+        optionId:
+          type: string
+          format: uuid
+        type:
+          type: string
+        paidAmount:
+          type: number
+        exercised:
+          type: boolean
+    ReportUsageCommand:
+      type: object
+      properties:
+        mileage:
+          type: integer
+          format: int64
+        usageDetail:
+          type: string
+    UsageRecordDTO:
+      type: object
+      properties:
+        recordId:
+          type: string
+          format: uuid
+        mileage:
+          type: integer
+          format: int64
+        usageDetail:
+          type: string
+        reportedAt:
+          type: string
+          format: date-time
+    ReportServiceEventCommand:
+      type: object
+      properties:
+        eventType:
+          type: string
+        description:
+          type: string
+        cost:
+          type: number
+    ServiceEventDTO:
+      type: object
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        eventType:
+          type: string
+        cost:
+          type: number
+        description:
+          type: string
+        eventDate:
+          type: string
+          format: date-time
+    RequestReturnCommand:
+      type: object
+      properties:
+        assetId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+    ReturnDTO:
+      type: object
+      properties:
+        returnId:
+          type: string
+          format: uuid
+        conditionReport:
+          type: string
+        damageCost:
+          type: number
+        finalized:
+          type: boolean
+    AddApplicationPartyCommand:
+      type: object
+      properties:
+        partyId:
+          type: string
+          format: uuid
+        role:
+          type: string
+    RejectOfferCommand:
+      type: object
+      properties:
+        reason:
+          type: string
+    RegisterExternalAccountCommand:
+      type: object
+      properties:
+        iban:
+          type: string
+        bankName:
+          type: string
+        holderName:
+          type: string
+    ExternalAccountDTO:
+      type: object
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        iban:
+          type: string
+        bankName:
+          type: string
+        holderName:
+          type: string
+        registeredAt:
+          type: string
+          format: date-time
+    UploadDocumentCommand:
+      type: object
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+        documentType:
+          type: string
+        content:
+          type: string
+          format: byte
+    ApplicationDocumentDTO:
+      type: object
+      properties:
+        documentId:
+          type: string
+          format: uuid
+        applicationId:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+        documentType:
+          type: string
+        uploadedAt:
+          type: string
+          format: date-time
+        size:
+          type: integer
+          format: int64
+    SignContractCommand:
+      type: object
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+    ContractDTO:
+      type: object
+      properties:
+        contractId:
+          type: string
+          format: uuid
+        applicationId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        documentUrl:
+          type: string
+        signedAt:
+          type: string
+          format: date-time
+    CreateApplicationCommand:
+      type: object
+      properties:
+        productId:
+          type: string
+          format: uuid
+        requestedAmount:
+          type: number
+        term:
+          type: integer
+          format: int32
+        purpose:
+          type: string
+    ApplicationDetailDTO:
+      type: object
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+        productType:
+          type: string
+        status:
+          type: string
+        requestedAmount:
+          type: number
+        term:
+          type: integer
+          format: int32
+        purpose:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    TaskDTO:
+      type: object
+      properties:
+        taskId:
+          type: string
+          format: uuid
+        description:
+          type: string
+        status:
+          type: string
+        dueDate:
+          type: string
+          format: date
+    UpdateApplicationCommand:
+      type: object
+      properties:
+        requestedAmount:
+          type: number
+        term:
+          type: integer
+          format: int32
+        purpose:
+          type: string
+    PersonalLoanSummaryDTO:
+      type: object
+      properties:
+        agreementId:
+          type: string
+          format: uuid
+        loanPurpose:
+          type: string
+        status:
+          type: string
+        rateType:
+          type: string
+        interestRate:
+          type: number
+    ScheduleEntryDTO:
+      type: object
+      properties:
+        installmentNumber:
+          type: integer
+          format: int32
+        dueDate:
+          type: string
+          format: date
+        principal:
+          type: number
+        interest:
+          type: number
+        totalAmount:
+          type: number
+        status:
+          type: string
+    RepaymentDTO:
+      type: object
+      properties:
+        repaymentId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+        type:
+          type: string
+        appliedAt:
+          type: string
+          format: date-time
+    RebateDTO:
+      type: object
+      properties:
+        rebateId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+        reason:
+          type: string
+        appliedAt:
+          type: string
+          format: date-time
+    RateInfoDTO:
+      type: object
+      properties:
+        currentRate:
+          type: number
+        rateType:
+          type: string
+        nextReviewDate:
+          type: string
+          format: date
+    RateChangeDTO:
+      type: object
+      properties:
+        changeId:
+          type: string
+          format: uuid
+        previousRate:
+          type: number
+        newRate:
+          type: number
+        effectiveDate:
+          type: string
+          format: date
+    LoanNotificationDTO:
+      type: object
+      properties:
+        notificationId:
+          type: string
+          format: uuid
+        message:
+          type: string
+        channel:
+          type: string
+        sentAt:
+          type: string
+          format: date-time
+    InstallmentPaymentDTO:
+      type: object
+      properties:
+        paymentId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+        paidAt:
+          type: string
+          format: date-time
+    InstallmentDTO:
+      type: object
+      properties:
+        installmentId:
+          type: string
+          format: uuid
+        installmentNumber:
+          type: integer
+          format: int32
+        dueDate:
+          type: string
+          format: date
+        amount:
+          type: number
+        status:
+          type: string
+    LoanEventDTO:
+      type: object
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        eventType:
+          type: string
+        description:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+    EscrowDTO:
+      type: object
+      properties:
+        escrowId:
+          type: string
+          format: uuid
+        type:
+          type: string
+        balance:
+          type: number
+    LoanDocumentDTO:
+      type: object
+      properties:
+        documentId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+        uploadedAt:
+          type: string
+          format: date-time
+    DisbursementDTO:
+      type: object
+      properties:
+        disbursementId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+        status:
+          type: string
+        disbursedAt:
+          type: string
+          format: date-time
+    DisbursementPlanDTO:
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/DisbursementDTO"
+    BalanceDTO:
+      type: object
+      properties:
+        loanId:
+          type: string
+          format: uuid
+        outstandingPrincipal:
+          type: number
+        outstandingInterest:
+          type: number
+        totalOutstanding:
+          type: number
+        currency:
+          type: string
+        asOfDate:
+          type: string
+          format: date-time
+    BalanceHistoryDTO:
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/BalanceDTO"
+    AccrualDTO:
+      type: object
+      properties:
+        accrualId:
+          type: string
+          format: uuid
+        period:
+          type: string
+        amount:
+          type: number
+        calculatedAt:
+          type: string
+          format: date-time
+    LoanDetailDTO:
+      type: object
+      properties:
+        loanId:
+          type: string
+          format: uuid
+        productType:
+          type: string
+        status:
+          type: string
+        outstandingBalance:
+          type: number
+        nextPaymentDate:
+          type: string
+          format: date
+        nextPaymentAmount:
+          type: number
+        originalAmount:
+          type: number
+        term:
+          type: integer
+          format: int32
+        interestRate:
+          type: number
+        disbursementDate:
+          type: string
+          format: date
+        maturityDate:
+          type: string
+          format: date
+    LoanSummaryDTO:
+      type: object
+      properties:
+        loanId:
+          type: string
+          format: uuid
+        productType:
+          type: string
+        status:
+          type: string
+        outstandingBalance:
+          type: number
+        nextPaymentDate:
+          type: string
+          format: date
+        nextPaymentAmount:
+          type: number
+    CollectionActionDTO:
+      type: object
+      properties:
+        actionId:
+          type: string
+          format: uuid
+        actionType:
+          type: string
+        description:
+          type: string
+        performedAt:
+          type: string
+          format: date-time
+    CollectionCaseDetailDTO:
+      type: object
+      properties:
+        caseId:
+          type: string
+          format: uuid
+        loanId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        overdueAmount:
+          type: number
+        daysPastDue:
+          type: integer
+          format: int32
+        actions:
+          type: array
+          items:
+            $ref: "#/components/schemas/CollectionActionDTO"
+    CollectionCaseSummaryDTO:
+      type: object
+      properties:
+        caseId:
+          type: string
+          format: uuid
+        loanId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        overdueAmount:
+          type: number
+        daysPastDue:
+          type: integer
+          format: int32
+    PickupDTO:
+      type: object
+      properties:
+        pickupId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        scheduledDate:
+          type: string
+          format: date
+        collectorName:
+          type: string
+    DeliveryDTO:
+      type: object
+      properties:
+        deliveryId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        trackingNumber:
+          type: string
+        carrierName:
+          type: string
+        deliveredAt:
+          type: string
+          format: date-time
+    FinancedAssetDTO:
+      type: object
+      properties:
+        assetId:
+          type: string
+          format: uuid
+        description:
+          type: string
+        serialNumber:
+          type: string
+        value:
+          type: number
+        active:
+          type: boolean
+    AgreementDetailDTO:
+      type: object
+      properties:
+        agreementId:
+          type: string
+          format: uuid
+        financeType:
+          type: string
+        status:
+          type: string
+        totalValue:
+          type: number
+        residualValue:
+          type: number
+        purchaseOptionPrice:
+          type: number
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+    AgreementSummaryDTO:
+      type: object
+      properties:
+        agreementId:
+          type: string
+          format: uuid
+        financeType:
+          type: string
+        status:
+          type: string
+        totalValue:
+          type: number
+    VerificationDTO:
+      type: object
+      properties:
+        verificationId:
+          type: string
+          format: uuid
+        type:
+          type: string
+        status:
+          type: string
+        completedAt:
+          type: string
+          format: date-time
+    ApplicationStatusHistoryDTO:
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatusEntryDTO"
+    StatusEntryDTO:
+      type: object
+      properties:
+        status:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        reason:
+          type: string
+    ScoringStatusDTO:
+      type: object
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        score:
+          type: integer
+          format: int32
+    FeeDTO:
+      type: object
+      properties:
+        feeId:
+          type: string
+          format: uuid
+        feeName:
+          type: string
+        amount:
+          type: number
+        currency:
+          type: string
+        type:
+          type: string
+    OfferDetailDTO:
+      type: object
+      properties:
+        offerId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+        term:
+          type: integer
+          format: int32
+        monthlyPayment:
+          type: number
+        annualRate:
+          type: number
+        status:
+          type: string
+        totalCost:
+          type: number
+        fees:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeeDTO"
+        conditions:
+          type: array
+          items:
+            type: string
+    OfferSummaryDTO:
+      type: object
+      properties:
+        offerId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+        term:
+          type: integer
+          format: int32
+        monthlyPayment:
+          type: number
+        annualRate:
+          type: number
+        status:
+          type: string
+    DecisionDTO:
+      type: object
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+        result:
+          type: string
+        reasons:
+          type: array
+          items:
+            type: string
+        decidedAt:
+          type: string
+          format: date-time
+    ConditionDTO:
+      type: object
+      properties:
+        conditionId:
+          type: string
+          format: uuid
+        description:
+          type: string
+        status:
+          type: string
+        type:
+          type: string
+    ApplicationSummaryDTO:
+      type: object
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+        productType:
+          type: string
+        status:
+          type: string
+        requestedAmount:
+          type: number
+        createdAt:
+          type: string
+          format: date-time

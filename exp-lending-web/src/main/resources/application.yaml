@@ -10,23 +10,23 @@ server:
 api-configuration:
   domain-platform:
     lending-loan-origination:
-      base-path: ${LOAN_ORIGINATION_URL:http://localhost:8082}
+      base-path: ${ENDPOINT_DOMAIN_LENDING_LOAN_ORIGINATION:http://localhost:8082}
     lending-loan-servicing:
-      base-path: ${LOAN_SERVICING_URL:http://localhost:8084}
+      base-path: ${ENDPOINT_DOMAIN_LENDING_LOAN_SERVICING:http://localhost:8084}
     lending-credit-scoring:
-      base-path: ${CREDIT_SCORING_URL:http://localhost:8042}
+      base-path: ${ENDPOINT_DOMAIN_LENDING_CREDIT_SCORING:http://localhost:8042}
     lending-asset-finance:
-      base-path: ${ASSET_FINANCE_URL:http://localhost:8043}
+      base-path: ${ENDPOINT_DOMAIN_LENDING_ASSET_FINANCE:http://localhost:8043}
     lending-personal-loans:
-      base-path: ${PERSONAL_LOANS_URL:http://localhost:8044}
+      base-path: ${ENDPOINT_DOMAIN_LENDING_PERSONAL_LOANS:http://localhost:8044}
     product-pricing:
-      base-path: ${PRODUCT_PRICING_URL:http://localhost:8086}
+      base-path: ${ENDPOINT_DOMAIN_PRODUCT_PRICING:http://localhost:8086}
     common-contracts:
-      base-path: ${CONTRACTS_URL:http://localhost:8090}
+      base-path: ${ENDPOINT_DOMAIN_COMMON_CONTRACTS:http://localhost:8090}
     common-sca:
-      base-path: ${SCA_URL:http://localhost:8041}
+      base-path: ${ENDPOINT_DOMAIN_COMMON_SCA:http://localhost:8041}
     common-notifications:
-      base-path: ${NOTIFICATIONS_URL:http://localhost:8095}
+      base-path: ${ENDPOINT_DOMAIN_COMMON_NOTIFICATIONS:http://localhost:8095}
 springdoc:
   packages-to-scan: com.firefly.experience.lending.web.controllers
   paths-to-match: /api/**

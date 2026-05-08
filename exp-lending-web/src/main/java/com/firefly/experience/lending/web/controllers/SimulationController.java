@@ -1,12 +1,18 @@
 package com.firefly.experience.lending.web.controllers;
 
 import com.firefly.experience.lending.core.simulation.commands.CheckEligibilityCommand;
+import com.firefly.experience.lending.core.simulation.commands.ConfigureSimulationCommand;
 import com.firefly.experience.lending.core.simulation.commands.CreateSimulationCommand;
+import com.firefly.experience.lending.core.simulation.queries.ConfiguredSimulationDTO;
 import com.firefly.experience.lending.core.simulation.queries.EligibilityResultDTO;
 import com.firefly.experience.lending.core.simulation.queries.SimulationResultDTO;
+import com.firefly.experience.lending.core.simulation.services.SimulationConfigurationService;
 import com.firefly.experience.lending.core.simulation.services.SimulationService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -26,6 +32,7 @@ import java.util.UUID;
 public class SimulationController {
 
     private final SimulationService simulationService;
+    private final SimulationConfigurationService simulationConfigurationService;
 
     @PostMapping(value = "/simulations",
             consumes = MediaType.APPLICATION_JSON_VALUE,
@@ -44,6 +51,23 @@ public class SimulationController {
     public Mono<ResponseEntity<SimulationResultDTO>> getSimulation(@PathVariable UUID id) {
         return simulationService.getSimulation(id)
                 .map(ResponseEntity::ok);
+    }
+
+    @PostMapping(value = "/simulations/configure",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(operationId = "configureLendingSimulation",
+            summary = "Configure Simulation",
+            description = "Calculates a lending simulation via the pricing engine and persists the "
+                    + "result through domain-lending-loan-origination.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Simulation configured and persisted"),
+            @ApiResponse(responseCode = "400", description = "Validation failed")
+    })
+    public Mono<ResponseEntity<ConfiguredSimulationDTO>> configureSimulation(
+            @Valid @RequestBody ConfigureSimulationCommand command) {
+        return simulationConfigurationService.configure(command)
+                .map(result -> ResponseEntity.status(HttpStatus.CREATED).body(result));
     }
 
     @PostMapping(value = "/eligibility",

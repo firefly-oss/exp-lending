@@ -92,6 +92,10 @@
         </dependency>
         <dependency>
             <groupId>com.firefly</groupId>
+            <artifactId>domain-core-pricing-engine-sdk</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.firefly</groupId>
             <artifactId>domain-common-contracts-sdk</artifactId>
         </dependency>
         <dependency>

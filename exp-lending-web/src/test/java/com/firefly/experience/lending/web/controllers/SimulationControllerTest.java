@@ -1,10 +1,14 @@
 package com.firefly.experience.lending.web.controllers;
 
 import com.firefly.experience.lending.core.simulation.commands.CheckEligibilityCommand;
+import com.firefly.experience.lending.core.simulation.commands.ConfigureSimulationCommand;
 import com.firefly.experience.lending.core.simulation.commands.CreateSimulationCommand;
+import com.firefly.experience.lending.core.simulation.queries.ConfiguredSimulationDTO;
 import com.firefly.experience.lending.core.simulation.queries.EligibilityResultDTO;
 import com.firefly.experience.lending.core.simulation.queries.SimulationResultDTO;
+import com.firefly.experience.lending.core.simulation.services.SimulationConfigurationService;
 import com.firefly.experience.lending.core.simulation.services.SimulationService;
+import org.mockito.ArgumentCaptor;
 import org.fireflyframework.web.error.config.ErrorHandlingProperties;
 import org.fireflyframework.web.error.converter.ExceptionConverterService;
 import org.fireflyframework.web.error.service.ErrorResponseNegotiator;
@@ -39,6 +43,9 @@ class SimulationControllerTest {
 
     @MockBean
     private SimulationService simulationService;
+
+    @MockBean
+    private SimulationConfigurationService simulationConfigurationService;
 
     // fireflyframework-web's GlobalExceptionHandler is component-scanned into this context
     // because ExpLendingApplication scans org.fireflyframework.web; mock its required deps.
@@ -147,6 +154,72 @@ class SimulationControllerTest {
                     assertThat(body.isEligible()).isTrue();
                     assertThat(body.getMaxAmount()).isEqualByComparingTo("50000");
                 });
+    }
+
+    @Test
+    void configureSimulation_returns201WithBody() {
+        var simulationId = UUID.randomUUID();
+        var productId = UUID.randomUUID();
+        var configured = ConfiguredSimulationDTO.builder()
+                .simulationId(simulationId)
+                .productType("PERSONAL_LOAN")
+                .productId(productId)
+                .requestedAmount(new BigDecimal("12000"))
+                .term(36)
+                .monthlyPayment(new BigDecimal("365.50"))
+                .tin(new BigDecimal("6.50"))
+                .tae(new BigDecimal("6.95"))
+                .totalAmount(new BigDecimal("13158.00"))
+                .currency("EUR")
+                .build();
+
+        when(simulationConfigurationService.configure(any(ConfigureSimulationCommand.class)))
+                .thenReturn(Mono.just(configured));
+
+        webTestClient.post()
+                .uri("/api/v1/experience/lending/simulations/configure")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {
+                            "productType": "PERSONAL_LOAN",
+                            "productId": "%s",
+                            "requestedAmount": 12000,
+                            "term": 36,
+                            "purpose": "car"
+                        }
+                        """.formatted(productId))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(ConfiguredSimulationDTO.class)
+                .value(body -> {
+                    assertThat(body.getSimulationId()).isEqualTo(simulationId);
+                    assertThat(body.getMonthlyPayment()).isEqualByComparingTo("365.50");
+                    assertThat(body.getCurrency()).isEqualTo("EUR");
+                });
+
+        ArgumentCaptor<ConfigureSimulationCommand> captor =
+                ArgumentCaptor.forClass(ConfigureSimulationCommand.class);
+        org.mockito.Mockito.verify(simulationConfigurationService).configure(captor.capture());
+        assertThat(captor.getValue().getPurpose()).isEqualTo("car");
+        assertThat(captor.getValue().getRequestedAmount()).isEqualByComparingTo("12000");
+    }
+
+    @Test
+    void configureSimulation_rejectsInvalidInputForPersonalLoan() {
+        // The mocked GlobalExceptionHandler maps validation failures to 5xx in this
+        // test harness (matching the existing controller-test convention).
+        webTestClient.post()
+                .uri("/api/v1/experience/lending/simulations/configure")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {
+                            "productType": "PERSONAL_LOAN",
+                            "requestedAmount": -50,
+                            "term": 0
+                        }
+                        """)
+                .exchange()
+                .expectStatus().is5xxServerError();
     }
 
     @Test

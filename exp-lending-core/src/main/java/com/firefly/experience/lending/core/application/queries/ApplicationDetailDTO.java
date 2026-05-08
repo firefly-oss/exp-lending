@@ -19,6 +19,11 @@ import java.util.UUID;
 public class ApplicationDetailDTO {
 
     private UUID applicationId;
+    /**
+     * Soft link to the simulation that produced this application. Echoed back to the caller
+     * so the front-end can persist the traceability locally without a follow-up GET.
+     */
+    private UUID simulationId;
     private String productType;
     private String status;
     private BigDecimal requestedAmount;

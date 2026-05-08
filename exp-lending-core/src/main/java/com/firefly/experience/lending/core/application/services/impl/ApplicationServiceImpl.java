@@ -2,7 +2,7 @@ package com.firefly.experience.lending.core.application.services.impl;
 
 import com.firefly.domain.lending.loan.origination.sdk.api.LoanOriginationApi;
 import com.firefly.domain.lending.loan.origination.sdk.model.ApplicationPartyDTO;
-import com.firefly.domain.lending.loan.origination.sdk.model.EmploymentDataPatchRequest;
+import com.firefly.domain.lending.loan.origination.sdk.model.UpdateApplicationEmploymentDataCommand;
 import com.firefly.domain.lending.loan.origination.sdk.model.LoanApplicationDTO;
 import com.firefly.domain.lending.loan.origination.sdk.model.RegisterLoanApplicationCommand;
 import com.firefly.domain.lending.loan.origination.sdk.model.SubmitApplicationCommand;
@@ -175,8 +175,8 @@ public class ApplicationServiceImpl implements ApplicationService {
                         applicationId, patch, idempotencyKey));
     }
 
-    private EmploymentDataPatchRequest buildPatch(UpdateEmploymentDataCommand cmd) {
-        return new EmploymentDataPatchRequest()
+    private UpdateApplicationEmploymentDataCommand buildPatch(UpdateEmploymentDataCommand cmd) {
+        return new UpdateApplicationEmploymentDataCommand()
                 .employmentStatus(toUpper(cmd.getEmploymentStatus()))
                 .employmentTypeLabel(toUpper(cmd.getEmploymentType()))
                 .employer(cmd.getEmployer())

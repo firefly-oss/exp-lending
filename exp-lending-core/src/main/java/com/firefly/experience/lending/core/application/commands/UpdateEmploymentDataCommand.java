@@ -14,7 +14,7 @@ import java.math.BigDecimal;
 /**
  * Command for updating an applicant's employment and economic profile attached
  * to a loan application. Maps to the SDK's
- * {@code EmploymentDataPatchRequest} after normalisation.
+ * {@code UpdateApplicationEmploymentDataCommand} after normalisation.
  *
  * <p>Date fields use the {@code MM/YYYY} format per the front-end contract
  * and are converted to {@link java.time.LocalDate} on the first day of the month

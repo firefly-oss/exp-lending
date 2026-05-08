@@ -1,23 +1,30 @@
 package com.firefly.experience.lending.core.application.services.impl;
 
 import com.firefly.domain.lending.loan.origination.sdk.api.LoanOriginationApi;
+import com.firefly.domain.lending.loan.origination.sdk.model.ApplicationPartyDTO;
+import com.firefly.domain.lending.loan.origination.sdk.model.UpdateApplicationEmploymentDataCommand;
 import com.firefly.domain.lending.loan.origination.sdk.model.LoanApplicationDTO;
 import com.firefly.domain.lending.loan.origination.sdk.model.RegisterLoanApplicationCommand;
 import com.firefly.domain.lending.loan.origination.sdk.model.SubmitApplicationCommand;
 import com.firefly.experience.lending.core.application.commands.CreateApplicationCommand;
 import com.firefly.experience.lending.core.application.commands.UpdateApplicationCommand;
+import com.firefly.experience.lending.core.application.commands.UpdateEmploymentDataCommand;
 import com.firefly.experience.lending.core.application.queries.ApplicationDetailDTO;
 import com.firefly.experience.lending.core.application.queries.ApplicationStatusHistoryDTO;
 import com.firefly.experience.lending.core.application.queries.ApplicationSummaryDTO;
 import com.firefly.experience.lending.core.application.services.ApplicationService;
+import com.firefly.experience.lending.core.util.IdempotencyKeys;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.fireflyframework.web.error.exceptions.BusinessException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -34,27 +41,72 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     @Override
     public Mono<ApplicationDetailDTO> createApplication(CreateApplicationCommand command) {
-        log.debug("Creating application for productId={}", command.getProductId());
+        return Mono.fromCallable(() -> validateCreateCommand(command))
+                .flatMap(validated -> {
+                    log.debug("Creating application productId={} simulationId={} requestedAmount={} term={}",
+                            validated.getProductId(),
+                            validated.getSimulationId(),
+                            validated.getRequestedAmount(),
+                            validated.getTerm());
 
-        var registerCmd = new RegisterLoanApplicationCommand()
-                .loanApplicationId(UUID.randomUUID())
-                .applicationDate(LocalDate.now())
-                .loanPurpose(command.getPurpose());
+                    // The client mints loanApplicationId up-front; treat it as
+                    // the natural transaction key for this createApplication
+                    // call so a retry of the same logical request reuses the
+                    // same downstream idempotency keys.
+                    UUID loanApplicationId = UUID.randomUUID();
+                    var registerCmd = new RegisterLoanApplicationCommand()
+                            .loanApplicationId(loanApplicationId)
+                            .applicationDate(LocalDate.now())
+                            .loanPurpose(validated.getPurpose())
+                            .simulationId(validated.getSimulationId());
 
-        var submitCmd = new SubmitApplicationCommand()
-                .application(registerCmd);
+                    var submitCmd = new SubmitApplicationCommand()
+                            .application(registerCmd);
 
-        return loanOriginationApi.submitApplication(submitCmd, UUID.randomUUID().toString())
-                .flatMap(response -> {
-                    UUID applicationId = extractUuid(response instanceof Map<?, ?> m ? m : Map.of(),
-                            "loanApplicationId");
-                    if (applicationId == null) {
-                        applicationId = registerCmd.getLoanApplicationId();
-                    }
-                    return loanOriginationApi.getApplication(applicationId, UUID.randomUUID().toString());
-                })
-                .map(dto -> mapToDetail(dto, command.getRequestedAmount(), command.getTerm(),
-                        command.getPurpose()));
+                    String submitKey = IdempotencyKeys.of(
+                            "exp-lending", "create-application", "submit",
+                            loanApplicationId.toString());
+
+                    return loanOriginationApi.submitApplication(submitCmd, submitKey)
+                            .flatMap(response -> {
+                                UUID applicationId = extractUuid(
+                                        response instanceof Map<?, ?> m ? m : Map.of(),
+                                        "loanApplicationId");
+                                if (applicationId == null) {
+                                    applicationId = registerCmd.getLoanApplicationId();
+                                }
+                                String getKey = IdempotencyKeys.of(
+                                        "exp-lending", "create-application", "get",
+                                        applicationId.toString());
+                                return loanOriginationApi.getApplication(applicationId, getKey);
+                            })
+                            .map(dto -> mapToDetail(dto,
+                                    validated.getRequestedAmount(),
+                                    validated.getTerm(),
+                                    validated.getPurpose(),
+                                    validated.getSimulationId()));
+                });
+    }
+
+    private CreateApplicationCommand validateCreateCommand(CreateApplicationCommand command) {
+        if (command == null) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED",
+                    "createApplication command is required");
+        }
+        if (command.getProductId() == null) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED",
+                    "productId is required");
+        }
+        if (command.getRequestedAmount() == null
+                || command.getRequestedAmount().signum() <= 0) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED",
+                    "requestedAmount must be strictly positive");
+        }
+        if (command.getTerm() == null || command.getTerm() < 1) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED",
+                    "term must be at least 1 month");
+        }
+        return command;
     }
 
     @Override
@@ -69,7 +121,7 @@ public class ApplicationServiceImpl implements ApplicationService {
     public Mono<ApplicationDetailDTO> getApplication(UUID applicationId) {
         log.debug("Getting application applicationId={}", applicationId);
         return loanOriginationApi.getApplication(applicationId, UUID.randomUUID().toString())
-                .map(dto -> mapToDetail(dto, null, null, null));
+                .map(dto -> mapToDetail(dto, null, null, null, null));
     }
 
     @Override
@@ -81,7 +133,8 @@ public class ApplicationServiceImpl implements ApplicationService {
                 .map(dto -> mapToDetail(dto,
                         command.getRequestedAmount() != null ? command.getRequestedAmount() : null,
                         command.getTerm(),
-                        command.getPurpose() != null ? command.getPurpose() : dto.getLoanPurpose()));
+                        command.getPurpose() != null ? command.getPurpose() : dto.getLoanPurpose(),
+                        null));
     }
 
     @Override
@@ -108,10 +161,69 @@ public class ApplicationServiceImpl implements ApplicationService {
                 .build());
     }
 
+    @Override
+    public Mono<ApplicationPartyDTO> updateEmploymentData(UUID applicationId,
+                                                          UpdateEmploymentDataCommand command) {
+        log.debug("Updating employment data for applicationId={}", applicationId);
+        // applicationId is the stable natural key for this PATCH-style upsert:
+        // retrying the same logical update must not produce duplicate downstream
+        // employment-data rows.
+        String idempotencyKey = IdempotencyKeys.of(
+                "exp-lending", "update-employment-data", applicationId.toString());
+        return Mono.fromCallable(() -> buildPatch(command))
+                .flatMap(patch -> loanOriginationApi.updateApplicationEmploymentData(
+                        applicationId, patch, idempotencyKey));
+    }
+
+    private UpdateApplicationEmploymentDataCommand buildPatch(UpdateEmploymentDataCommand cmd) {
+        return new UpdateApplicationEmploymentDataCommand()
+                .employmentStatus(toUpper(cmd.getEmploymentStatus()))
+                .employmentTypeLabel(toUpper(cmd.getEmploymentType()))
+                .employer(cmd.getEmployer())
+                .position(cmd.getPosition())
+                .employmentStartDate(parseMonthYear(cmd.getEmploymentStartDate()))
+                .annualPaydays(toInteger(cmd.getAnnualPaydays()))
+                .monthlySalary(cmd.getMonthlySalary())
+                .housingType(toUpper(cmd.getHousingType()))
+                .housingCost(cmd.getHousingCost())
+                .housingStartDate(parseMonthYear(cmd.getHousingStartDate()))
+                .existingLoans(toInteger(cmd.getExistingLoans()))
+                .otherDebts(cmd.getOtherDebts());
+    }
+
+    private static Integer toInteger(Short value) {
+        return value == null ? null : value.intValue();
+    }
+
+    private LocalDate parseMonthYear(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        // Bean Validation already enforces MM/YYYY shape; defend against bypass.
+        String[] parts = value.split("/");
+        if (parts.length != 2) {
+            throw new BusinessException(
+                    HttpStatus.BAD_REQUEST,
+                    "INVALID_DATE_FORMAT",
+                    "date must be in MM/YYYY format, was: " + value);
+        }
+        int month = Integer.parseInt(parts[0]);
+        int year = Integer.parseInt(parts[1]);
+        return LocalDate.of(year, month, 1);
+    }
+
+    private String toUpper(String s) {
+        return s == null ? null : s.toUpperCase(Locale.ROOT);
+    }
+
     private ApplicationDetailDTO mapToDetail(LoanApplicationDTO dto, java.math.BigDecimal requestedAmount,
-                                              Integer term, String purpose) {
+                                              Integer term, String purpose, UUID simulationIdOverride) {
+        UUID simulationId = simulationIdOverride != null
+                ? simulationIdOverride
+                : dto.getSimulationId();
         return ApplicationDetailDTO.builder()
                 .applicationId(dto.getLoanApplicationId())
+                .simulationId(simulationId)
                 .status(dto.getApplicationStatusId() != null ? dto.getApplicationStatusId().toString() : null)
                 .requestedAmount(requestedAmount)
                 .term(term)

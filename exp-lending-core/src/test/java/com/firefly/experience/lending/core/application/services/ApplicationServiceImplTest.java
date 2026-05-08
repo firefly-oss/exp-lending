@@ -6,9 +6,11 @@ import com.firefly.domain.lending.loan.origination.sdk.model.SubmitApplicationCo
 import com.firefly.experience.lending.core.application.commands.CreateApplicationCommand;
 import com.firefly.experience.lending.core.application.commands.UpdateApplicationCommand;
 import com.firefly.experience.lending.core.application.services.impl.ApplicationServiceImpl;
+import org.fireflyframework.web.error.exceptions.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import reactor.core.publisher.Mono;
@@ -22,6 +24,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,11 +43,13 @@ class ApplicationServiceImplTest {
     @Test
     void createApplication_submitsToOriginationApi_andReturnsDetail() {
         var applicationId = UUID.randomUUID();
+        var simulationId = UUID.randomUUID();
         Map<String, Object> submitResponse = Map.of("loanApplicationId", applicationId.toString());
 
         var dto = new LoanApplicationDTO()
                 .loanApplicationId(applicationId)
                 .loanPurpose("PERSONAL")
+                .simulationId(simulationId)
                 .createdAt(LocalDateTime.now());
 
         when(loanOriginationApi.submitApplication(any(SubmitApplicationCommand.class), any()))
@@ -53,6 +58,7 @@ class ApplicationServiceImplTest {
                 .thenReturn(Mono.just(dto));
 
         var command = new CreateApplicationCommand();
+        command.setSimulationId(simulationId);
         command.setProductId(UUID.randomUUID());
         command.setRequestedAmount(new BigDecimal("15000"));
         command.setTerm(36);
@@ -62,11 +68,47 @@ class ApplicationServiceImplTest {
                 .assertNext(result -> {
                     assertThat(result).isNotNull();
                     assertThat(result.getApplicationId()).isEqualTo(applicationId);
+                    assertThat(result.getSimulationId()).isEqualTo(simulationId);
                     assertThat(result.getRequestedAmount()).isEqualByComparingTo("15000");
                     assertThat(result.getTerm()).isEqualTo(36);
                     assertThat(result.getPurpose()).isEqualTo("PERSONAL");
                 })
                 .verifyComplete();
+    }
+
+    @Test
+    void createApplication_passesSimulationIdThroughToDownstreamCommand() {
+        var applicationId = UUID.randomUUID();
+        var simulationId = UUID.randomUUID();
+        Map<String, Object> submitResponse = Map.of("loanApplicationId", applicationId.toString());
+
+        var dto = new LoanApplicationDTO()
+                .loanApplicationId(applicationId)
+                .createdAt(LocalDateTime.now());
+
+        when(loanOriginationApi.submitApplication(any(SubmitApplicationCommand.class), any()))
+                .thenReturn(Mono.just(submitResponse));
+        when(loanOriginationApi.getApplication(eq(applicationId), any()))
+                .thenReturn(Mono.just(dto));
+
+        var command = new CreateApplicationCommand();
+        command.setSimulationId(simulationId);
+        command.setProductId(UUID.randomUUID());
+        command.setRequestedAmount(new BigDecimal("9000"));
+        command.setTerm(24);
+        command.setPurpose("CAR");
+
+        StepVerifier.create(service.createApplication(command))
+                .expectNextCount(1)
+                .verifyComplete();
+
+        var captor = ArgumentCaptor.forClass(SubmitApplicationCommand.class);
+        verify(loanOriginationApi).submitApplication(captor.capture(), any());
+        var sent = captor.getValue();
+        assertThat(sent.getApplication()).isNotNull();
+        assertThat(sent.getApplication().getSimulationId()).isEqualTo(simulationId);
+        assertThat(sent.getApplication().getLoanPurpose()).isEqualTo("CAR");
+        assertThat(sent.getApplication().getApplicationDate()).isNotNull();
     }
 
     @Test
@@ -84,6 +126,8 @@ class ApplicationServiceImplTest {
 
         var command = new CreateApplicationCommand();
         command.setProductId(UUID.randomUUID());
+        command.setRequestedAmount(new BigDecimal("1000"));
+        command.setTerm(12);
         command.setPurpose("HOME_IMPROVEMENT");
 
         StepVerifier.create(service.createApplication(command))
@@ -98,9 +142,46 @@ class ApplicationServiceImplTest {
 
         var command = new CreateApplicationCommand();
         command.setProductId(UUID.randomUUID());
+        command.setRequestedAmount(new BigDecimal("5000"));
+        command.setTerm(18);
 
         StepVerifier.create(service.createApplication(command))
                 .expectErrorMessage("upstream error")
+                .verify();
+    }
+
+    @Test
+    void createApplication_rejectsMissingProductId_withBusinessException() {
+        var command = new CreateApplicationCommand();
+        command.setRequestedAmount(new BigDecimal("5000"));
+        command.setTerm(18);
+
+        StepVerifier.create(service.createApplication(command))
+                .expectError(BusinessException.class)
+                .verify();
+    }
+
+    @Test
+    void createApplication_rejectsNonPositiveRequestedAmount_withBusinessException() {
+        var command = new CreateApplicationCommand();
+        command.setProductId(UUID.randomUUID());
+        command.setRequestedAmount(BigDecimal.ZERO);
+        command.setTerm(18);
+
+        StepVerifier.create(service.createApplication(command))
+                .expectError(BusinessException.class)
+                .verify();
+    }
+
+    @Test
+    void createApplication_rejectsZeroTerm_withBusinessException() {
+        var command = new CreateApplicationCommand();
+        command.setProductId(UUID.randomUUID());
+        command.setRequestedAmount(new BigDecimal("5000"));
+        command.setTerm(0);
+
+        StepVerifier.create(service.createApplication(command))
+                .expectError(BusinessException.class)
                 .verify();
     }
 

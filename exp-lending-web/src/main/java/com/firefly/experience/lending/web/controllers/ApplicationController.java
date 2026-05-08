@@ -1,13 +1,18 @@
 package com.firefly.experience.lending.web.controllers;
 
+import com.firefly.domain.lending.loan.origination.sdk.model.ApplicationPartyDTO;
 import com.firefly.experience.lending.core.application.commands.CreateApplicationCommand;
 import com.firefly.experience.lending.core.application.commands.UpdateApplicationCommand;
+import com.firefly.experience.lending.core.application.commands.UpdateEmploymentDataCommand;
 import com.firefly.experience.lending.core.application.queries.ApplicationDetailDTO;
 import com.firefly.experience.lending.core.application.queries.ApplicationStatusHistoryDTO;
 import com.firefly.experience.lending.core.application.queries.ApplicationSummaryDTO;
 import com.firefly.experience.lending.core.application.services.ApplicationService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -31,10 +36,16 @@ public class ApplicationController {
     private final ApplicationService applicationService;
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Create Application",
-            description = "Creates a new loan application for the given product, amount, term, and purpose.")
+    @Operation(operationId = "createApplication",
+            summary = "Create Application",
+            description = "Creates a new loan application linked to the simulation that produced it. "
+                    + "The optional simulationId provides traceability back to the simulator output.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Application created"),
+            @ApiResponse(responseCode = "400", description = "Validation failed")
+    })
     public Mono<ResponseEntity<ApplicationDetailDTO>> createApplication(
-            @RequestBody CreateApplicationCommand command) {
+            @Valid @RequestBody CreateApplicationCommand command) {
         return applicationService.createApplication(command)
                 .map(result -> ResponseEntity.status(HttpStatus.CREATED).body(result));
     }
@@ -87,6 +98,24 @@ public class ApplicationController {
             description = "Returns the full status transition history for a loan application.")
     public Mono<ResponseEntity<ApplicationStatusHistoryDTO>> getStatusHistory(@PathVariable UUID id) {
         return applicationService.getStatusHistory(id)
+                .map(ResponseEntity::ok);
+    }
+
+    @PatchMapping(value = "/{applicationId}/employment-data",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(operationId = "updateApplicationEmploymentData",
+            summary = "Update Application Employment Data",
+            description = "Updates the applicant's employment and economic profile attached to a "
+                    + "loan application.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Employment data updated"),
+            @ApiResponse(responseCode = "400", description = "Validation failed")
+    })
+    public Mono<ResponseEntity<ApplicationPartyDTO>> updateEmploymentData(
+            @PathVariable UUID applicationId,
+            @Valid @RequestBody UpdateEmploymentDataCommand command) {
+        return applicationService.updateEmploymentData(applicationId, command)
                 .map(ResponseEntity::ok);
     }
 }

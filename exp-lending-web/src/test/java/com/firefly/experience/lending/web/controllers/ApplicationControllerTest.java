@@ -1,11 +1,14 @@
 package com.firefly.experience.lending.web.controllers;
 
+import com.firefly.domain.lending.loan.origination.sdk.model.ApplicationPartyDTO;
 import com.firefly.experience.lending.core.application.commands.CreateApplicationCommand;
 import com.firefly.experience.lending.core.application.commands.UpdateApplicationCommand;
+import com.firefly.experience.lending.core.application.commands.UpdateEmploymentDataCommand;
 import com.firefly.experience.lending.core.application.queries.ApplicationDetailDTO;
 import com.firefly.experience.lending.core.application.queries.ApplicationStatusHistoryDTO;
 import com.firefly.experience.lending.core.application.queries.ApplicationSummaryDTO;
 import com.firefly.experience.lending.core.application.services.ApplicationService;
+import org.mockito.ArgumentCaptor;
 import org.fireflyframework.web.error.config.ErrorHandlingProperties;
 import org.fireflyframework.web.error.converter.ExceptionConverterService;
 import org.fireflyframework.web.error.service.ErrorResponseNegotiator;
@@ -206,6 +209,76 @@ class ApplicationControllerTest {
                 .uri(BASE_PATH + "/{id}/withdraw", applicationId)
                 .exchange()
                 .expectStatus().isOk();
+    }
+
+    @Test
+    void updateEmploymentData_returns200WithBody() {
+        var applicationId = UUID.randomUUID();
+        var partyDto = new ApplicationPartyDTO()
+                .applicationPartyId(UUID.randomUUID())
+                .loanApplicationId(applicationId);
+
+        when(applicationService.updateEmploymentData(eq(applicationId),
+                any(UpdateEmploymentDataCommand.class)))
+                .thenReturn(Mono.just(partyDto));
+
+        webTestClient.patch()
+                .uri(BASE_PATH + "/{applicationId}/employment-data", applicationId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {
+                            "employmentStatus": "private",
+                            "employmentType": "permanent",
+                            "employer": "Acme S.A.",
+                            "position": "Engineer",
+                            "employmentStartDate": "06/2018",
+                            "annualPaydays": 14,
+                            "monthlySalary": 2500.00,
+                            "housingType": "rent",
+                            "housingCost": 850.00,
+                            "housingStartDate": "01/2020",
+                            "existingLoans": 1,
+                            "otherDebts": 120.00
+                        }
+                        """)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(ApplicationPartyDTO.class)
+                .value(body -> assertThat(body.getLoanApplicationId()).isEqualTo(applicationId));
+
+        ArgumentCaptor<UpdateEmploymentDataCommand> captor =
+                ArgumentCaptor.forClass(UpdateEmploymentDataCommand.class);
+        org.mockito.Mockito.verify(applicationService)
+                .updateEmploymentData(eq(applicationId), captor.capture());
+        assertThat(captor.getValue().getEmploymentStatus()).isEqualTo("private");
+        assertThat(captor.getValue().getEmploymentStartDate()).isEqualTo("06/2018");
+        assertThat(captor.getValue().getMonthlySalary()).isEqualByComparingTo("2500.00");
+    }
+
+    @Test
+    void updateEmploymentData_rejectsInvalidDateFormat() {
+        // The mocked GlobalExceptionHandler maps validation failures to 5xx in this
+        // test harness (matching the existing controller-test convention).
+        var applicationId = UUID.randomUUID();
+
+        webTestClient.patch()
+                .uri(BASE_PATH + "/{applicationId}/employment-data", applicationId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {
+                            "employmentStatus": "private",
+                            "employmentStartDate": "2018-06-01",
+                            "annualPaydays": 12,
+                            "monthlySalary": 1500,
+                            "housingType": "rent",
+                            "housingCost": 0,
+                            "housingStartDate": "01/2020",
+                            "existingLoans": 0,
+                            "otherDebts": 0
+                        }
+                        """)
+                .exchange()
+                .expectStatus().is5xxServerError();
     }
 
     @Test

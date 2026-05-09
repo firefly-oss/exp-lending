@@ -22,7 +22,7 @@ api-configuration:
     product-pricing:
       base-path: ${ENDPOINT_DOMAIN_PRODUCT_PRICING:http://localhost:8086}
     pricing-engine:
-      base-path: ${PRICING_ENGINE_URL:http://localhost:8088}
+      base-path: ${ENDPOINT_DOMAIN_CORE_PRICING_ENGINE:http://localhost:8088}
       timeout: 5s
     common-contracts:
       base-path: ${ENDPOINT_DOMAIN_COMMON_CONTRACTS:http://localhost:8090}

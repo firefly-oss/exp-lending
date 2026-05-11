@@ -15,6 +15,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -26,6 +27,8 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class ApplicationDocumentsServiceImpl implements ApplicationDocumentsService {
+
+    private static final String DEFAULT_MIME_TYPE = "application/octet-stream";
 
     private final LoanOriginationApi loanOriginationApi;
 
@@ -42,9 +45,12 @@ public class ApplicationDocumentsServiceImpl implements ApplicationDocumentsServ
     public Mono<com.firefly.experience.lending.core.application.documents.queries.ApplicationDocumentDTO> uploadDocument(UUID applicationId, UploadDocumentCommand command) {
         log.debug("Uploading document for applicationId={} fileName={}", applicationId, command.getFileName());
 
+        String resolvedMimeType = inferMimeType(command.getFileName());
+
         var sdkCmd = new RegisterApplicationDocumentCommand()
                 .documentName(command.getFileName())
-                .mimeType(command.getDocumentType())
+                .documentTypeCode(command.getDocumentType())
+                .mimeType(resolvedMimeType)
                 .fileSizeBytes(command.getContent() != null ? (long) command.getContent().length : null);
 
         // Same logical upload → same key. Avoids the duplicate-row hazard of UUID.randomUUID().
@@ -80,6 +86,41 @@ public class ApplicationDocumentsServiceImpl implements ApplicationDocumentsServ
         if (value instanceof String s) return UUID.fromString(s);
         if (value instanceof UUID u) return u;
         return null;
+    }
+
+    /**
+     * Best-effort mime-type inference from a filename's extension. Falls back to
+     * application/octet-stream when the extension is missing or unknown — the
+     * core service stores whatever we send and does not derive its own value, so
+     * sending an opaque-but-honest fallback is safer than guessing.
+     */
+    public static String inferMimeType(String fileName) {
+        if (fileName == null) {
+            return DEFAULT_MIME_TYPE;
+        }
+        int dot = fileName.lastIndexOf('.');
+        if (dot < 0 || dot == fileName.length() - 1) {
+            return DEFAULT_MIME_TYPE;
+        }
+        String ext = fileName.substring(dot + 1).toLowerCase(Locale.ROOT);
+        return switch (ext) {
+            case "pdf"  -> "application/pdf";
+            case "jpg", "jpeg" -> "image/jpeg";
+            case "png"  -> "image/png";
+            case "gif"  -> "image/gif";
+            case "tif", "tiff" -> "image/tiff";
+            case "webp" -> "image/webp";
+            case "txt"  -> "text/plain";
+            case "csv"  -> "text/csv";
+            case "html", "htm" -> "text/html";
+            case "json" -> "application/json";
+            case "xml"  -> "application/xml";
+            case "doc"  -> "application/msword";
+            case "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            case "xls"  -> "application/vnd.ms-excel";
+            case "xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            default     -> DEFAULT_MIME_TYPE;
+        };
     }
 
     @Override

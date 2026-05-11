@@ -8,6 +8,7 @@ import com.firefly.experience.lending.core.application.documents.commands.Upload
 import com.firefly.experience.lending.core.application.documents.services.impl.ApplicationDocumentsServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -23,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -90,7 +92,7 @@ class ApplicationDocumentsServiceImplTest {
         var command = new UploadDocumentCommand();
         command.setApplicationId(APPLICATION_ID);
         command.setFileName("id_card.jpg");
-        command.setDocumentType("image/jpeg");
+        command.setDocumentType("ID_DOCUMENT");
         command.setContent(new byte[]{1, 2, 3});
 
         Map<String, UUID> attachResponse = Map.of("applicationDocumentId", DOCUMENT_ID);
@@ -115,6 +117,54 @@ class ApplicationDocumentsServiceImplTest {
                     assertThat(dto.getSize()).isEqualTo(3L);
                 })
                 .verifyComplete();
+    }
+
+    @Test
+    void uploadDocument_passesDocumentTypeAsCodeAndDerivesMimeTypeFromFileName() {
+        var command = new UploadDocumentCommand();
+        command.setApplicationId(APPLICATION_ID);
+        command.setFileName("nomina_enero_2025.pdf");
+        command.setDocumentType("PAYSLIP");
+        command.setContent(new byte[]{1, 2, 3, 4});
+
+        when(loanOriginationApi.attachDocuments(eq(APPLICATION_ID), any(RegisterApplicationDocumentCommand.class), any(String.class)))
+                .thenReturn(Mono.just(Map.of("applicationDocumentId", DOCUMENT_ID)));
+        when(loanOriginationApi.getApplicationDocumentById(eq(APPLICATION_ID), eq(DOCUMENT_ID), any(String.class)))
+                .thenReturn(Mono.just(new ApplicationDocumentDTO()
+                        .applicationDocumentId(DOCUMENT_ID)
+                        .loanApplicationId(APPLICATION_ID)
+                        .documentName("nomina_enero_2025.pdf")
+                        .mimeType("application/pdf")
+                        .fileSizeBytes(4L)));
+
+        StepVerifier.create(service.uploadDocument(APPLICATION_ID, command))
+                .expectNextCount(1)
+                .verifyComplete();
+
+        ArgumentCaptor<RegisterApplicationDocumentCommand> sent =
+                ArgumentCaptor.forClass(RegisterApplicationDocumentCommand.class);
+        verify(loanOriginationApi).attachDocuments(eq(APPLICATION_ID), sent.capture(), any(String.class));
+        assertThat(sent.getValue().getDocumentTypeCode()).isEqualTo("PAYSLIP");
+        assertThat(sent.getValue().getMimeType()).isEqualTo("application/pdf");
+        assertThat(sent.getValue().getDocumentName()).isEqualTo("nomina_enero_2025.pdf");
+        assertThat(sent.getValue().getFileSizeBytes()).isEqualTo(4L);
+    }
+
+    @Test
+    void inferMimeType_returnsOctetStreamForUnknownOrMissingExtension() {
+        assertThat(ApplicationDocumentsServiceImpl.inferMimeType(null)).isEqualTo("application/octet-stream");
+        assertThat(ApplicationDocumentsServiceImpl.inferMimeType("noextension")).isEqualTo("application/octet-stream");
+        assertThat(ApplicationDocumentsServiceImpl.inferMimeType("trailing.dot.")).isEqualTo("application/octet-stream");
+        assertThat(ApplicationDocumentsServiceImpl.inferMimeType("weird.unknownext")).isEqualTo("application/octet-stream");
+    }
+
+    @Test
+    void inferMimeType_recognisesCommonExtensions() {
+        assertThat(ApplicationDocumentsServiceImpl.inferMimeType("payslip.pdf")).isEqualTo("application/pdf");
+        assertThat(ApplicationDocumentsServiceImpl.inferMimeType("id.JPG")).isEqualTo("image/jpeg");
+        assertThat(ApplicationDocumentsServiceImpl.inferMimeType("scan.jpeg")).isEqualTo("image/jpeg");
+        assertThat(ApplicationDocumentsServiceImpl.inferMimeType("logo.png")).isEqualTo("image/png");
+        assertThat(ApplicationDocumentsServiceImpl.inferMimeType("data.csv")).isEqualTo("text/csv");
     }
 
     @Test

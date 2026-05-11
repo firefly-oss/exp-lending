@@ -16,6 +16,7 @@ import reactor.test.StepVerifier;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -92,6 +93,8 @@ class ApplicationDocumentsServiceImplTest {
         command.setDocumentType("image/jpeg");
         command.setContent(new byte[]{1, 2, 3});
 
+        Map<String, UUID> attachResponse = Map.of("applicationDocumentId", DOCUMENT_ID);
+
         var sdkResponse = new ApplicationDocumentDTO()
                 .applicationDocumentId(DOCUMENT_ID)
                 .loanApplicationId(APPLICATION_ID)
@@ -101,9 +104,9 @@ class ApplicationDocumentsServiceImplTest {
                 .fileSizeBytes(3L);
 
         when(loanOriginationApi.attachDocuments(eq(APPLICATION_ID), any(RegisterApplicationDocumentCommand.class), any(String.class)))
-                .thenReturn(Mono.just(new Object()));
-        when(loanOriginationApi.getApplicationDocuments(eq(APPLICATION_ID), isNull()))
-                .thenReturn(Mono.just(new PaginationResponseApplicationDocumentDTO().content(List.of(sdkResponse))));
+                .thenReturn(Mono.just(attachResponse));
+        when(loanOriginationApi.getApplicationDocumentById(eq(APPLICATION_ID), eq(DOCUMENT_ID), any(String.class)))
+                .thenReturn(Mono.just(sdkResponse));
 
         StepVerifier.create(service.uploadDocument(APPLICATION_ID, command))
                 .assertNext(dto -> {
@@ -126,6 +129,21 @@ class ApplicationDocumentsServiceImplTest {
 
         StepVerifier.create(service.uploadDocument(APPLICATION_ID, command))
                 .expectError(RuntimeException.class)
+                .verify();
+    }
+
+    @Test
+    void uploadDocument_failsWithBusinessException_whenAttachResponseMissingDocumentId() {
+        var command = new UploadDocumentCommand();
+        command.setFileName("anonymous.pdf");
+        command.setDocumentType("application/pdf");
+        command.setContent(new byte[]{9});
+
+        when(loanOriginationApi.attachDocuments(eq(APPLICATION_ID), any(), any()))
+                .thenReturn(Mono.just(Map.of()));
+
+        StepVerifier.create(service.uploadDocument(APPLICATION_ID, command))
+                .expectError(org.fireflyframework.web.error.exceptions.BusinessException.class)
                 .verify();
     }
 

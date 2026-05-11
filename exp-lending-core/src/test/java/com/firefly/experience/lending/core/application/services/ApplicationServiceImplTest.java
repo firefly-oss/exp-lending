@@ -44,7 +44,7 @@ class ApplicationServiceImplTest {
     void createApplication_submitsToOriginationApi_andReturnsDetail() {
         var applicationId = UUID.randomUUID();
         var simulationId = UUID.randomUUID();
-        Map<String, Object> submitResponse = Map.of("loanApplicationId", applicationId.toString());
+        Map<String, UUID> submitResponse = Map.of("loanApplicationId", applicationId);
 
         var dto = new LoanApplicationDTO()
                 .loanApplicationId(applicationId)
@@ -80,7 +80,7 @@ class ApplicationServiceImplTest {
     void createApplication_passesSimulationIdThroughToDownstreamCommand() {
         var applicationId = UUID.randomUUID();
         var simulationId = UUID.randomUUID();
-        Map<String, Object> submitResponse = Map.of("loanApplicationId", applicationId.toString());
+        Map<String, UUID> submitResponse = Map.of("loanApplicationId", applicationId);
 
         var dto = new LoanApplicationDTO()
                 .loanApplicationId(applicationId)
@@ -112,17 +112,11 @@ class ApplicationServiceImplTest {
     }
 
     @Test
-    void createApplication_fallsBackToGeneratedId_whenResponseMissingApplicationId() {
-        Map<String, Object> submitResponse = Map.of();
-
-        var dto = new LoanApplicationDTO()
-                .loanApplicationId(UUID.randomUUID())
-                .createdAt(LocalDateTime.now());
+    void createApplication_failsWithBusinessException_whenResponseMissingApplicationId() {
+        Map<String, UUID> submitResponse = Map.of();
 
         when(loanOriginationApi.submitApplication(any(SubmitApplicationCommand.class), any()))
                 .thenReturn(Mono.just(submitResponse));
-        when(loanOriginationApi.getApplication(any(UUID.class), any()))
-                .thenReturn(Mono.just(dto));
 
         var command = new CreateApplicationCommand();
         command.setProductId(UUID.randomUUID());
@@ -131,8 +125,8 @@ class ApplicationServiceImplTest {
         command.setPurpose("HOME_IMPROVEMENT");
 
         StepVerifier.create(service.createApplication(command))
-                .assertNext(result -> assertThat(result).isNotNull())
-                .verifyComplete();
+                .expectError(BusinessException.class)
+                .verify();
     }
 
     @Test

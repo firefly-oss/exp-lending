@@ -49,13 +49,7 @@ public class ApplicationServiceImpl implements ApplicationService {
                             validated.getRequestedAmount(),
                             validated.getTerm());
 
-                    // The client mints loanApplicationId up-front; treat it as
-                    // the natural transaction key for this createApplication
-                    // call so a retry of the same logical request reuses the
-                    // same downstream idempotency keys.
-                    UUID loanApplicationId = UUID.randomUUID();
                     var registerCmd = new RegisterLoanApplicationCommand()
-                            .loanApplicationId(loanApplicationId)
                             .applicationDate(LocalDate.now())
                             .loanPurpose(validated.getPurpose())
                             .simulationId(validated.getSimulationId());
@@ -63,9 +57,16 @@ public class ApplicationServiceImpl implements ApplicationService {
                     var submitCmd = new SubmitApplicationCommand()
                             .application(registerCmd);
 
+                    // Idempotency key derived from stable input fields. Same logical
+                    // request (retry of the same input) → same key → downstream
+                    // dedupes without the client minting a resource ID.
                     String submitKey = IdempotencyKeys.of(
                             "exp-lending", "create-application", "submit",
-                            loanApplicationId.toString());
+                            String.valueOf(validated.getProductId()),
+                            String.valueOf(validated.getSimulationId()),
+                            validated.getRequestedAmount().toPlainString(),
+                            String.valueOf(validated.getTerm()),
+                            String.valueOf(validated.getPurpose()));
 
                     return loanOriginationApi.submitApplication(submitCmd, submitKey)
                             .flatMap(response -> {
@@ -73,7 +74,10 @@ public class ApplicationServiceImpl implements ApplicationService {
                                         response instanceof Map<?, ?> m ? m : Map.of(),
                                         "loanApplicationId");
                                 if (applicationId == null) {
-                                    applicationId = registerCmd.getLoanApplicationId();
+                                    return Mono.error(new BusinessException(
+                                            HttpStatus.BAD_GATEWAY,
+                                            "UPSTREAM_PROTOCOL_ERROR",
+                                            "domain submitApplication did not return loanApplicationId"));
                                 }
                                 String getKey = IdempotencyKeys.of(
                                         "exp-lending", "create-application", "get",

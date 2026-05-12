@@ -1,6 +1,8 @@
 spring:
   application:
     name: exp-lending
+  codec:
+    max-in-memory-size: 20MB
   threads:
     virtual:
       enabled: true

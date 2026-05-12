@@ -4,6 +4,7 @@ import com.firefly.domain.lending.loan.origination.sdk.api.LoanOriginationApi;
 import com.firefly.domain.lending.loan.origination.sdk.invoker.ApiClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.client.WebClient;
 
 /**
  * Factory that creates and configures the Loan Origination SDK {@link ApiClient}
@@ -11,6 +12,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class LoanOriginationClientFactory {
+
+    private static final int MAX_IN_MEMORY_SIZE = 20 * 1024 * 1024;
 
     private final ApiClient apiClient;
 
@@ -20,7 +23,10 @@ public class LoanOriginationClientFactory {
      * @param properties connection properties for the domain Loan Origination service
      */
     public LoanOriginationClientFactory(LoanOriginationProperties properties) {
-        this.apiClient = new ApiClient();
+        WebClient webClient = ApiClient.buildWebClientBuilder()
+                .codecs(c -> c.defaultCodecs().maxInMemorySize(MAX_IN_MEMORY_SIZE))
+                .build();
+        this.apiClient = new ApiClient(webClient);
         this.apiClient.setBasePath(properties.getBasePath());
     }
 

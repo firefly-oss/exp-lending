@@ -2,6 +2,7 @@ package com.firefly.experience.lending.core.simulation.services.impl;
 
 import com.firefly.domain.product.pricing.sdk.api.EligibilityApi;
 import com.firefly.domain.product.pricing.sdk.api.PricingApi;
+import com.firefly.domain.product.pricing.sdk.model.EvaluateEligibilityCommand;
 import com.firefly.domain.product.pricing.sdk.model.RegisterProductPricingCommand;
 import com.firefly.domain.product.pricing.sdk.model.UpdateProductPricingCommand;
 import com.firefly.experience.lending.core.simulation.commands.CheckEligibilityCommand;
@@ -65,13 +66,18 @@ public class SimulationServiceImpl implements SimulationService {
     public Mono<EligibilityResultDTO> checkEligibility(CheckEligibilityCommand command) {
         log.debug("Checking eligibility for productId={}", command.getProductId());
 
-        Map<String, Object> body = Map.of(
-                "partyId", command.getPartyId().toString(),
-                "requestedAmount", command.getRequestedAmount()
-        );
+        EvaluateEligibilityCommand body = new EvaluateEligibilityCommand()
+                .partyId(command.getPartyId())
+                .productId(command.getProductId())
+                .requestedAmount(command.getRequestedAmount());
 
         return eligibilityApi.evaluateEligibility(command.getProductId(), body, UUID.randomUUID().toString())
-                .map(this::mapToEligibilityResult);
+                .map(result -> EligibilityResultDTO.builder()
+                        .evaluationId(result.getEvaluationId())
+                        .eligible(Boolean.TRUE.equals(result.getEligible()))
+                        .maxAmount(result.getMaxAmount())
+                        .reasons(result.getReasons() != null ? result.getReasons() : List.of())
+                        .build());
     }
 
     private SimulationResultDTO mapToSimulationResult(Object response, Integer term, String productType) {
@@ -81,16 +87,6 @@ public class SimulationServiceImpl implements SimulationService {
                 .annualRate(extractBigDecimal(map, "configValue"))
                 .term(term)
                 .productType(productType != null ? productType : extractString(map, "configKey"))
-                .build();
-    }
-
-    private EligibilityResultDTO mapToEligibilityResult(Object response) {
-        Map<?, ?> map = response instanceof Map<?, ?> m ? m : Map.of();
-        return EligibilityResultDTO.builder()
-                .evaluationId(extractUuid(map, "eligibilityId"))
-                .eligible(Boolean.TRUE.equals(map.get("eligible")))
-                .maxAmount(extractBigDecimal(map, "maxAmount"))
-                .reasons(List.of())
                 .build();
     }
 

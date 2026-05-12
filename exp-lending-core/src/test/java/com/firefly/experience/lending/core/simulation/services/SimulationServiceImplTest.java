@@ -110,11 +110,10 @@ class SimulationServiceImplTest {
         var productId = UUID.randomUUID();
         var partyId = UUID.randomUUID();
         var evaluationId = UUID.randomUUID();
-        Map<String, Object> apiResponse = Map.of(
-                "eligibilityId", evaluationId.toString(),
-                "eligible", true,
-                "maxAmount", 50000.0
-        );
+        var apiResponse = new com.firefly.domain.product.pricing.sdk.model.EligibilityResultDTO()
+                .evaluationId(evaluationId)
+                .eligible(true)
+                .maxAmount(new BigDecimal("50000"));
 
         var command = new CheckEligibilityCommand();
         command.setPartyId(partyId);
@@ -128,7 +127,7 @@ class SimulationServiceImplTest {
                 .assertNext(result -> {
                     assertThat(result.getEvaluationId()).isEqualTo(evaluationId);
                     assertThat(result.isEligible()).isTrue();
-                    assertThat(result.getMaxAmount()).isEqualByComparingTo("50000.0");
+                    assertThat(result.getMaxAmount()).isEqualByComparingTo("50000");
                     assertThat(result.getReasons()).isEmpty();
                 })
                 .verifyComplete();
@@ -137,10 +136,10 @@ class SimulationServiceImplTest {
     @Test
     void checkEligibility_mapsIneligibleResponse() {
         var productId = UUID.randomUUID();
-        Map<String, Object> apiResponse = Map.of(
-                "eligibilityId", UUID.randomUUID().toString(),
-                "eligible", false
-        );
+        var apiResponse = new com.firefly.domain.product.pricing.sdk.model.EligibilityResultDTO()
+                .evaluationId(UUID.randomUUID())
+                .eligible(false)
+                .reasons(java.util.List.of("AMOUNT_ABOVE_MAXIMUM"));
 
         var command = new CheckEligibilityCommand();
         command.setPartyId(UUID.randomUUID());
@@ -151,7 +150,10 @@ class SimulationServiceImplTest {
                 .thenReturn(Mono.just(apiResponse));
 
         StepVerifier.create(service.checkEligibility(command))
-                .assertNext(result -> assertThat(result.isEligible()).isFalse())
+                .assertNext(result -> {
+                    assertThat(result.isEligible()).isFalse();
+                    assertThat(result.getReasons()).containsExactly("AMOUNT_ABOVE_MAXIMUM");
+                })
                 .verifyComplete();
     }
 }

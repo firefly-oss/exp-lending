@@ -6,6 +6,21 @@ spring:
   threads:
     virtual:
       enabled: true
+  # ---- DEMO ONLY: Redis disabled (no spring.data.redis is set, but the autoconfig still
+  # tries localhost:6379 if the classes are on the classpath). Restore when Redis is reachable.
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration
+
+# ---- DEMO ONLY: idempotency cache forced to Caffeine so the AUTO resolver does NOT pick Redis. ----
+firefly:
+  cache:
+    enabled: true
+    default-cache-type: CAFFEINE
+    redis:
+      enabled: false
+
 server:
   port: ${SERVER_PORT:8102}
   shutdown: graceful

@@ -10,10 +10,10 @@ import org.fireflyframework.web.error.converter.ExceptionConverterService;
 import org.fireflyframework.web.error.service.ErrorResponseNegotiator;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.security.reactive.ReactiveSecurityAutoConfiguration;
-import org.springframework.boot.autoconfigure.security.reactive.ReactiveUserDetailsServiceAutoConfiguration;
-import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.security.autoconfigure.web.reactive.ReactiveWebSecurityAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.ReactiveUserDetailsServiceAutoConfiguration;
+import org.springframework.boot.webflux.test.autoconfigure.WebFluxTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Flux;
@@ -31,7 +31,7 @@ import static org.mockito.Mockito.when;
 
 @WebFluxTest(controllers = AssetFinanceController.class,
         excludeAutoConfiguration = {
-                ReactiveSecurityAutoConfiguration.class,
+                ReactiveWebSecurityAutoConfiguration.class,
                 ReactiveUserDetailsServiceAutoConfiguration.class
         })
 class AssetFinanceControllerTest {
@@ -41,14 +41,14 @@ class AssetFinanceControllerTest {
     @Autowired
     private WebTestClient webTestClient;
 
-    @MockBean
+    @MockitoBean
     private AssetFinanceService assetFinanceService;
 
-    @MockBean
+    @MockitoBean
     private ExceptionConverterService exceptionConverterService;
-    @MockBean
+    @MockitoBean
     private ErrorHandlingProperties errorHandlingProperties;
-    @MockBean
+    @MockitoBean
     private ErrorResponseNegotiator errorResponseNegotiator;
 
     // -------------------------------------------------------------------------

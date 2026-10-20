@@ -12,6 +12,7 @@
     </parent>
 
     <artifactId>exp-lending</artifactId>
+    <name>exp-lending</name>
     <version>26.10.3</version>
     <packaging>pom</packaging>
 

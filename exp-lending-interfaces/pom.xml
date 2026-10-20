@@ -10,6 +10,7 @@
     </parent>
 
     <artifactId>exp-lending-interfaces</artifactId>
+    <name>exp-lending-interfaces</name>
 
     <properties>
         <maven.compiler.source>25</maven.compiler.source>

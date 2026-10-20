@@ -10,6 +10,7 @@
     </parent>
 
     <artifactId>exp-lending-sdk</artifactId>
+    <name>exp-lending-sdk</name>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

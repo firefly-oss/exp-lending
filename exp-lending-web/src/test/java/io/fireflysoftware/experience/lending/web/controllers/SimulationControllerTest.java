@@ -1,0 +1,251 @@
+package io.fireflysoftware.experience.lending.web.controllers;
+
+import io.fireflysoftware.experience.lending.core.simulation.commands.CheckEligibilityCommand;
+import io.fireflysoftware.experience.lending.core.simulation.commands.ConfigureSimulationCommand;
+import io.fireflysoftware.experience.lending.core.simulation.commands.CreateSimulationCommand;
+import io.fireflysoftware.experience.lending.core.simulation.queries.ConfiguredSimulationDTO;
+import io.fireflysoftware.experience.lending.core.simulation.queries.EligibilityResultDTO;
+import io.fireflysoftware.experience.lending.core.simulation.queries.SimulationResultDTO;
+import io.fireflysoftware.experience.lending.core.simulation.services.SimulationConfigurationService;
+import io.fireflysoftware.experience.lending.core.simulation.services.SimulationService;
+import org.mockito.ArgumentCaptor;
+import org.fireflyframework.web.error.config.ErrorHandlingProperties;
+import org.fireflyframework.web.error.converter.ExceptionConverterService;
+import org.fireflyframework.web.error.service.ErrorResponseNegotiator;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.security.autoconfigure.web.reactive.ReactiveWebSecurityAutoConfiguration;
+import org.springframework.boot.security.autoconfigure.ReactiveUserDetailsServiceAutoConfiguration;
+import org.springframework.boot.webflux.test.autoconfigure.WebFluxTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.reactive.server.WebTestClient;
+import reactor.core.publisher.Mono;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+
+@WebFluxTest(controllers = SimulationController.class,
+        excludeAutoConfiguration = {
+                ReactiveWebSecurityAutoConfiguration.class,
+                ReactiveUserDetailsServiceAutoConfiguration.class
+        })
+class SimulationControllerTest {
+
+    @Autowired
+    private WebTestClient webTestClient;
+
+    @MockitoBean
+    private SimulationService simulationService;
+
+    @MockitoBean
+    private SimulationConfigurationService simulationConfigurationService;
+
+    // fireflyframework-web's GlobalExceptionHandler is component-scanned into this context
+    // because ExpLendingApplication scans org.fireflyframework.web; mock its required deps.
+    @MockitoBean
+    private ExceptionConverterService exceptionConverterService;
+    @MockitoBean
+    private ErrorHandlingProperties errorHandlingProperties;
+    @MockitoBean
+    private ErrorResponseNegotiator errorResponseNegotiator;
+
+    @Test
+    void createSimulation_returns201WithBody() {
+        var simulationId = UUID.randomUUID();
+        var result = SimulationResultDTO.builder()
+                .simulationId(simulationId)
+                .annualRate(new BigDecimal("5.5"))
+                .monthlyPayment(new BigDecimal("450.00"))
+                .totalCost(new BigDecimal("10800.00"))
+                .term(24)
+                .productType("PERSONAL_LOAN")
+                .build();
+
+        when(simulationService.createSimulation(any(CreateSimulationCommand.class)))
+                .thenReturn(Mono.just(result));
+
+        webTestClient.post()
+                .uri("/api/v1/experience/lending/simulations")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {
+                            "amount": 10000,
+                            "term": 24,
+                            "productType": "PERSONAL_LOAN"
+                        }
+                        """)
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(SimulationResultDTO.class)
+                .value(body -> {
+                    assertThat(body.getSimulationId()).isEqualTo(simulationId);
+                    assertThat(body.getAnnualRate()).isEqualByComparingTo("5.5");
+                });
+    }
+
+    @Test
+    void getSimulation_returns200WithBody() {
+        var simulationId = UUID.randomUUID();
+        var result = SimulationResultDTO.builder()
+                .simulationId(simulationId)
+                .annualRate(new BigDecimal("6.0"))
+                .term(12)
+                .productType("CAR_LOAN")
+                .build();
+
+        when(simulationService.getSimulation(eq(simulationId))).thenReturn(Mono.just(result));
+
+        webTestClient.get()
+                .uri("/api/v1/experience/lending/simulations/{id}", simulationId)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(SimulationResultDTO.class)
+                .value(body -> {
+                    assertThat(body.getSimulationId()).isEqualTo(simulationId);
+                    assertThat(body.getTerm()).isEqualTo(12);
+                });
+    }
+
+    @Test
+    void getSimulation_returns500WhenServiceFails() {
+        var simulationId = UUID.randomUUID();
+        when(simulationService.getSimulation(eq(simulationId)))
+                .thenReturn(Mono.error(new RuntimeException("not found")));
+
+        webTestClient.get()
+                .uri("/api/v1/experience/lending/simulations/{id}", simulationId)
+                .exchange()
+                .expectStatus().is5xxServerError();
+    }
+
+    @Test
+    void checkEligibility_returns200WithBody() {
+        var result = EligibilityResultDTO.builder()
+                .evaluationId(UUID.randomUUID())
+                .eligible(true)
+                .maxAmount(new BigDecimal("50000"))
+                .reasons(List.of())
+                .build();
+
+        when(simulationService.checkEligibility(any(CheckEligibilityCommand.class)))
+                .thenReturn(Mono.just(result));
+
+        webTestClient.post()
+                .uri("/api/v1/experience/lending/eligibility")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {
+                            "partyId": "550e8400-e29b-41d4-a716-446655440000",
+                            "productId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                            "requestedAmount": 30000
+                        }
+                        """)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(EligibilityResultDTO.class)
+                .value(body -> {
+                    assertThat(body.isEligible()).isTrue();
+                    assertThat(body.getMaxAmount()).isEqualByComparingTo("50000");
+                });
+    }
+
+    @Test
+    void configureSimulation_returns201WithBody() {
+        var simulationId = UUID.randomUUID();
+        var productId = UUID.randomUUID();
+        var configured = ConfiguredSimulationDTO.builder()
+                .simulationId(simulationId)
+                .productType("PERSONAL_LOAN")
+                .productId(productId)
+                .requestedAmount(new BigDecimal("12000"))
+                .term(36)
+                .monthlyPayment(new BigDecimal("365.50"))
+                .tin(new BigDecimal("6.50"))
+                .tae(new BigDecimal("6.95"))
+                .totalAmount(new BigDecimal("13158.00"))
+                .currency("EUR")
+                .build();
+
+        when(simulationConfigurationService.configure(any(ConfigureSimulationCommand.class)))
+                .thenReturn(Mono.just(configured));
+
+        webTestClient.post()
+                .uri("/api/v1/experience/lending/simulations/configure")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {
+                            "productType": "PERSONAL_LOAN",
+                            "productId": "%s",
+                            "requestedAmount": 12000,
+                            "term": 36,
+                            "purpose": "car"
+                        }
+                        """.formatted(productId))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(ConfiguredSimulationDTO.class)
+                .value(body -> {
+                    assertThat(body.getSimulationId()).isEqualTo(simulationId);
+                    assertThat(body.getMonthlyPayment()).isEqualByComparingTo("365.50");
+                    assertThat(body.getCurrency()).isEqualTo("EUR");
+                });
+
+        ArgumentCaptor<ConfigureSimulationCommand> captor =
+                ArgumentCaptor.forClass(ConfigureSimulationCommand.class);
+        org.mockito.Mockito.verify(simulationConfigurationService).configure(captor.capture());
+        assertThat(captor.getValue().getPurpose()).isEqualTo("car");
+        assertThat(captor.getValue().getRequestedAmount()).isEqualByComparingTo("12000");
+    }
+
+    @Test
+    void configureSimulation_rejectsInvalidInputForPersonalLoan() {
+        // The mocked GlobalExceptionHandler maps validation failures to 5xx in this
+        // test harness (matching the existing controller-test convention).
+        webTestClient.post()
+                .uri("/api/v1/experience/lending/simulations/configure")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {
+                            "productType": "PERSONAL_LOAN",
+                            "requestedAmount": -50,
+                            "term": 0
+                        }
+                        """)
+                .exchange()
+                .expectStatus().is5xxServerError();
+    }
+
+    @Test
+    void checkEligibility_returns200WithIneligibleResult() {
+        var result = EligibilityResultDTO.builder()
+                .evaluationId(UUID.randomUUID())
+                .eligible(false)
+                .reasons(List.of("Insufficient income"))
+                .build();
+
+        when(simulationService.checkEligibility(any(CheckEligibilityCommand.class)))
+                .thenReturn(Mono.just(result));
+
+        webTestClient.post()
+                .uri("/api/v1/experience/lending/eligibility")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("""
+                        {
+                            "partyId": "550e8400-e29b-41d4-a716-446655440000",
+                            "productId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                            "requestedAmount": 999999
+                        }
+                        """)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(EligibilityResultDTO.class)
+                .value(body -> assertThat(body.isEligible()).isFalse());
+    }
+}

@@ -48,7 +48,7 @@ api-configuration:
     common-notifications:
       base-path: ${ENDPOINT_DOMAIN_COMMON_NOTIFICATIONS:http://localhost:8095}
 springdoc:
-  packages-to-scan: com.firefly.experience.lending.web.controllers
+  packages-to-scan: io.fireflysoftware.experience.lending.web.controllers
   paths-to-match: /api/**
   swagger-ui:
     path: /swagger-ui.html
@@ -74,7 +74,7 @@ management:
 logging:
   level:
     root: INFO
-    com.firefly.experience.lending: DEBUG
+    io.fireflysoftware.experience.lending: DEBUG
 
 ---
 spring:
@@ -83,7 +83,7 @@ spring:
       on-profile: dev
 logging:
   level:
-    com.firefly: DEBUG
+    io.fireflysoftware: DEBUG
 
 ---
 spring:
@@ -92,7 +92,7 @@ spring:
       on-profile: pro
 logging:
   level:
-    com.firefly: INFO
+    io.fireflysoftware: INFO
 springdoc:
   api-docs:
     enabled: false

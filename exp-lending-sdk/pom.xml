@@ -4,9 +4,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.firefly</groupId>
+        <groupId>io.fireflysoftware</groupId>
         <artifactId>exp-lending</artifactId>
-        <version>26.10.2</version>
+        <version>26.10.3</version>
     </parent>
 
     <artifactId>exp-lending-sdk</artifactId>
@@ -18,7 +18,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.firefly</groupId>
+            <groupId>io.fireflysoftware</groupId>
             <artifactId>exp-lending-web</artifactId>
             <scope>provided</scope>
         </dependency>
@@ -98,9 +98,9 @@
                             <generatorName>java</generatorName>
                             <library>webclient</library>
                             <output>${generated-sources-dir}</output>
-                            <apiPackage>com.firefly.experience.lending.sdk.api</apiPackage>
-                            <modelPackage>com.firefly.experience.lending.sdk.model</modelPackage>
-                            <invokerPackage>com.firefly.experience.lending.sdk.invoker</invokerPackage>
+                            <apiPackage>io.fireflysoftware.experience.lending.sdk.api</apiPackage>
+                            <modelPackage>io.fireflysoftware.experience.lending.sdk.model</modelPackage>
+                            <invokerPackage>io.fireflysoftware.experience.lending.sdk.invoker</invokerPackage>
                             <configOptions>
                                 <java20>true</java20>
                                 <useTags>true</useTags>

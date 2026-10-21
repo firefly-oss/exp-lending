@@ -41,16 +41,20 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Live payments port. Calls the domain-payments SDK for try, confirm, and cancel.
- * Selected with {@code firefly.experience.payments.adapter=hub}. The sandbox adapter stays the default.
+ * Live payments port. Calls {@link PaymentsApi#tryPayment} and {@link PaymentsApi#confirmPayment}.
+ * The running application selects this adapter with {@code firefly.experience.payments.adapter=hub}.
+ * That is also the default, so a missing property does not fall through to the in-memory sandbox.
  * This class does not generate a challenge and does not treat the word sandbox as a valid code.
  */
 @Component
-@ConditionalOnProperty(name = "firefly.experience.payments.adapter", havingValue = "hub")
+@ConditionalOnProperty(name = "firefly.experience.payments.adapter", havingValue = "hub", matchIfMissing = true)
 public class HttpPaymentsAdapter implements PaymentsPort {
 
     private static final String OUTBOUND_SCHEME = "DOMESTIC_OUTBOUND";
     private static final String INTERNAL_SCHEME = "INTERNAL_TRANSFER";
+    private static final UUID SAMPLE_PARTY = UUID.fromString("10000000-0000-4000-8000-000000000001");
+    private static final UUID SAMPLE_ACCOUNT = UUID.fromString("10000000-0000-4000-8000-000000000002");
+    private static final UUID SAMPLE_PAYMENT_METHOD = UUID.fromString("10000000-0000-4000-8000-0000000000a1");
 
     private final PaymentsApi payments;
     private final ConcurrentHashMap<UUID, PaymentInstruction> started = new ConcurrentHashMap<>();
@@ -76,6 +80,12 @@ public class HttpPaymentsAdapter implements PaymentsPort {
                 .scheme(instruction.path() == PaymentPath.OUTBOUND ? OUTBOUND_SCHEME : INTERNAL_SCHEME)
                 .idempotencyKey(instruction.loanId() + ":" + instruction.kind().name() + ":" + instruction.amount())
                 .amount(instruction.amount())
+                .currency("EUR")
+                .partyId(SAMPLE_PARTY)
+                .contractId(instruction.loanId())
+                .paymentMethodId(SAMPLE_PAYMENT_METHOD)
+                .sourceAccountId(SAMPLE_ACCOUNT)
+                .destinationAccountId(instruction.loanId())
                 .thirdPartyReference(reference);
         return payments.tryPayment(command, null)
                 .onErrorMap(WebClientResponseException.class, HttpPaymentsAdapter::hubFailure)

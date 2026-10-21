@@ -17,6 +17,11 @@
 
 package io.fireflysoftware.experience.lending.core.product;
 
+import io.fireflysoftware.domain.lending.loan.servicing.sdk.api.LoanServicingApi;
+import io.fireflysoftware.domain.lending.loan.servicing.sdk.model.CloseLoanCommand;
+import io.fireflysoftware.domain.lending.loan.servicing.sdk.model.EndPaymentHolidayCommand;
+import io.fireflysoftware.domain.lending.loan.servicing.sdk.model.GrantPaymentHolidayCommand;
+import io.fireflysoftware.domain.lending.loan.servicing.sdk.model.SetFixedRateCommand;
 import io.fireflysoftware.experience.lending.core.application.queries.ApplicationDetailDTO;
 import io.fireflysoftware.experience.lending.core.ports.AccessAction;
 import io.fireflysoftware.experience.lending.core.ports.AccessGuard;
@@ -29,14 +34,13 @@ import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
 /**
  * Servicing a customer can do after a credit product exists.
  * Disbursement and installment payment use {@link PaymentsPort}.
- * Rate, close, and payment holiday use the loan-servicing saga.
+ * Rate, close, and payment holiday call {@link LoanServicingApi}.
  * Agreement status, close, and cancel use the product domain when that saga exists.
  */
 @Service
@@ -46,34 +50,39 @@ public class LoanCustomerCommandService {
     private final IdentityPort identityPort;
     private final AccessPort accessPort;
     private final LendingCatalogPort catalog;
-    private final LoanCommandPort loanCommands;
+    private final LoanServicingApi loanServicingApi;
     private final CreditProductPort creditProducts;
     private final PaymentsPort payments;
     private final ContractReadPort contracts;
 
     public Mono<Void> changeRate(UUID loanId, BigDecimal oldRate, BigDecimal newRate,
                                  LocalDate effectiveDate, RateChangeReason reason) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("loanServicingCaseId", loanId);
-        body.put("oldInterestRate", oldRate);
-        body.put("newInterestRate", newRate);
-        body.put("effectiveDate", effectiveDate.toString());
-        body.put("reasonCode", reason.name());
-        return loan(loanId, AccessAction.UPDATE, LoanCustomerOperation.RATE_CHANGE, body);
+        SetFixedRateCommand command = new SetFixedRateCommand()
+                .loanServicingCaseId(loanId)
+                .oldInterestRate(oldRate)
+                .newInterestRate(newRate)
+                .effectiveDate(effectiveDate)
+                .reasonCode(SetFixedRateCommand.ReasonCodeEnum.fromValue(reason.name()));
+        return loan(loanId, AccessAction.UPDATE, LoanCustomerOperation.RATE_CHANGE,
+                () -> loanServicingApi.setFixedRate(loanId.toString(), command, key()).then());
     }
 
     public Mono<Void> closeLoan(UUID loanId, String reason) {
-        return loan(loanId, AccessAction.CLOSE, LoanCustomerOperation.CLOSE, Map.of("reason", reason));
+        CloseLoanCommand command = new CloseLoanCommand().reason(reason);
+        return loan(loanId, AccessAction.CLOSE, LoanCustomerOperation.CLOSE,
+                () -> loanServicingApi.closeLoan(loanId.toString(), command, key()).then());
     }
 
     public Mono<Void> grantPaymentHoliday(UUID loanId, String description) {
+        GrantPaymentHolidayCommand command = new GrantPaymentHolidayCommand().description(description);
         return loan(loanId, AccessAction.UPDATE, LoanCustomerOperation.PAYMENT_HOLIDAY_GRANT,
-                Map.of("description", description));
+                () -> loanServicingApi.grantPaymentHoliday(loanId.toString(), command, key()).then());
     }
 
     public Mono<Void> endPaymentHoliday(UUID loanId, String description) {
+        EndPaymentHolidayCommand command = new EndPaymentHolidayCommand().description(description);
         return loan(loanId, AccessAction.UPDATE, LoanCustomerOperation.PAYMENT_HOLIDAY_END,
-                Map.of("description", description));
+                () -> loanServicingApi.endPaymentHoliday(loanId.toString(), command, key()).then());
     }
 
     public Mono<PaymentReceipt> disburse(UUID loanId, BigDecimal amount) {
@@ -99,15 +108,19 @@ public class LoanCustomerCommandService {
                         () -> creditProducts.command(route, agreementId, operation, body)));
     }
 
-    private Mono<Void> loan(UUID loanId, AccessAction action, LoanCustomerOperation operation, Map<String, Object> body) {
+    private Mono<Void> loan(UUID loanId, AccessAction action, LoanCustomerOperation operation, java.util.function.Supplier<Mono<Void>> call) {
         return AccessGuard.require(identityPort, accessPort, IdentityPort.SAMPLE_USERNAME,
                 AccessRequest.of(loanId, action, "APPLICATION", loanId),
                 () -> catalog.loanOperation(operation).flatMap(path -> {
                     if ("payments".equals(path) || "contracts".equals(path)) {
                         return Mono.error(new IllegalStateException(operation.name() + " is not a loan saga"));
                     }
-                    return loanCommands.post(path.replace("{loanId}", loanId.toString()), body);
+                    return call.get();
                 }));
+    }
+
+    private static String key() {
+        return UUID.randomUUID().toString();
     }
 
     private Mono<PaymentReceipt> money(UUID loanId, UUID installmentId, BigDecimal amount, LoanCustomerOperation operation) {

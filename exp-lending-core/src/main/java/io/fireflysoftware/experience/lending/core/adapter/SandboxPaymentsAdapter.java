@@ -31,11 +31,11 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Sandbox shape for a payment: try, then confirm. An installer replaces this class
- * with the payments journey. It does not run SCA or TCC, and it does not call the ledger.
+ * In-memory try and confirm for unit tests. The running journey does not use this class.
+ * Select it only with {@code firefly.experience.payments.adapter=sandbox}.
  */
 @Component
-@ConditionalOnProperty(name = "firefly.experience.payments.adapter", havingValue = "sandbox", matchIfMissing = true)
+@ConditionalOnProperty(name = "firefly.experience.payments.adapter", havingValue = "sandbox")
 public class SandboxPaymentsAdapter implements PaymentsPort {
 
     private final ConcurrentHashMap<UUID, Pending> pending = new ConcurrentHashMap<>();

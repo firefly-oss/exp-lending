@@ -15,17 +15,24 @@
  */
 
 
-package io.fireflysoftware.experience.lending.core.product;
+package io.fireflysoftware.experience.lending.infra;
 
-import reactor.core.publisher.Mono;
+import lombok.Data;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
 
-import java.util.Map;
+import java.time.Duration;
 
 /**
- * Customer-safe commands on domain-lending-loan-servicing.
- * Disbursement and installment payment do not use this port.
+ * Configuration properties for the mortgage domain API.
+ * Binds to {@code api-configuration.domain-platform.lending-mortgage}.
  */
-public interface LoanCommandPort {
+@Component
+@ConfigurationProperties(prefix = "api-configuration.domain-platform.lending-mortgage")
+@Data
+public class MortgageProperties {
 
-    Mono<Void> post(String path, Map<String, Object> body);
+    private String basePath = "http://localhost:8045";
+
+    private Duration timeout = Duration.ofSeconds(10);
 }

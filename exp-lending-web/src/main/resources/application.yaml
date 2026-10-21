@@ -15,6 +15,9 @@ spring:
 
 # ---- DEMO ONLY: idempotency cache forced to Caffeine so the AUTO resolver does NOT pick Redis. ----
 firefly:
+  experience:
+    payments:
+      adapter: hub
   cache:
     enabled: true
     default-cache-type: CAFFEINE
@@ -38,6 +41,10 @@ api-configuration:
       base-path: ${ENDPOINT_DOMAIN_LENDING_DELINQUENCY_COLLECTIONS:http://localhost:8048}
     lending-personal-loans:
       base-path: ${ENDPOINT_DOMAIN_LENDING_PERSONAL_LOANS:http://localhost:8044}
+    lending-mortgage:
+      base-path: ${ENDPOINT_DOMAIN_LENDING_MORTGAGE:http://localhost:8045}
+    lending-supply-chain-finance:
+      base-path: ${ENDPOINT_DOMAIN_LENDING_SUPPLY_CHAIN_FINANCE:http://localhost:8046}
     product-pricing:
       base-path: ${ENDPOINT_DOMAIN_PRODUCT_PRICING:http://localhost:8086}
     pricing-engine:

@@ -61,6 +61,16 @@
             </dependency>
             <dependency>
                 <groupId>io.fireflysoftware</groupId>
+                <artifactId>domain-lending-mortgage-sdk</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.fireflysoftware</groupId>
+                <artifactId>domain-lending-supply-chain-finance-sdk</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.fireflysoftware</groupId>
                 <artifactId>domain-lending-delinquency-collections-sdk</artifactId>
                 <version>${project.version}</version>
             </dependency>

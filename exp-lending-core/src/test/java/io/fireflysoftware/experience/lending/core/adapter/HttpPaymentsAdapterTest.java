@@ -84,16 +84,27 @@ class HttpPaymentsAdapterTest {
     @Test
     void internalTryOmitsChallengeWhenTheHubDoes() {
         UUID paymentId = UUID.randomUUID();
+        UUID loanId = UUID.randomUUID();
+        AtomicReference<String> tryBody = new AtomicReference<>();
         WebClient client = WebClient.builder().exchangeFunction(request -> {
             assertThat(request.url().getPath()).isEqualTo("/api/v1/payments/tries");
-            return MonoResponse.created("{\"paymentId\":\"" + paymentId + "\",\"amount\":10}");
+            MockClientHttpRequest mock = new MockClientHttpRequest(request.method(), request.url());
+            return request.writeTo(mock, ExchangeStrategies.withDefaults()).then(reactor.core.publisher.Mono.defer(() -> {
+                tryBody.set(mock.getBodyAsString().block());
+                return MonoResponse.created("{\"paymentId\":\"" + paymentId + "\",\"amount\":10}");
+            }));
         }).build();
 
         PaymentTry tried = new HttpPaymentsAdapter(client).tryPayment(new PaymentInstruction(
-                UUID.randomUUID(), UUID.randomUUID(), new BigDecimal("10"), PaymentKind.INSTALLMENT, PaymentPath.INTERNAL)).block();
+                loanId, UUID.randomUUID(), new BigDecimal("10"), PaymentKind.INSTALLMENT, PaymentPath.INTERNAL)).block();
 
         assertThat(tried.challengeId()).isNull();
         assertThat(tried.challengeValue()).isNull();
+        assertThat(tryBody.get()).contains("\"currency\":\"EUR\"");
+        assertThat(tryBody.get()).contains("\"partyId\":\"10000000-0000-4000-8000-000000000001\"");
+        assertThat(tryBody.get()).contains("\"contractId\":\"" + loanId + "\"");
+        assertThat(tryBody.get()).contains("\"paymentMethodId\":\"10000000-0000-4000-8000-0000000000a1\"");
+        assertThat(tryBody.get()).contains("\"scheme\":\"INTERNAL_TRANSFER\"");
     }
 
     @Test

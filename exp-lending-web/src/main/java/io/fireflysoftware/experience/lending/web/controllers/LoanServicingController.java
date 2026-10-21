@@ -21,6 +21,7 @@ import io.fireflysoftware.experience.lending.core.servicing.commands.RequestEarl
 import io.fireflysoftware.experience.lending.core.servicing.commands.RequestRestructuringCommand;
 import io.fireflysoftware.experience.lending.core.servicing.queries.*;
 import io.fireflysoftware.experience.lending.core.servicing.services.AmortizationCalendarJourney;
+import io.fireflysoftware.experience.lending.core.servicing.services.LoanBookJourney;
 import io.fireflysoftware.experience.lending.core.servicing.services.LoanServicingService;
 import io.fireflysoftware.experience.lending.core.servicing.services.SyndicatedFacilityJourney;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,6 +34,7 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 /**
@@ -48,6 +50,7 @@ public class LoanServicingController {
     private final LoanServicingService loanServicingService;
     private final SyndicatedFacilityJourney syndicatedFacilityJourney;
     private final AmortizationCalendarJourney amortizationCalendarJourney;
+    private final LoanBookJourney loanBookJourney;
 
     @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get Loan",
@@ -85,6 +88,20 @@ public class LoanServicingController {
             description = "Reads the amortization calendar from the loan servicing domain, including each remaining balance.")
     public Flux<AmortizationCalendarRow> readAmortizationCalendar(@PathVariable UUID id) {
         return amortizationCalendarJourney.read(id);
+    }
+
+    @PostMapping(value = "/{id}/schedule", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Build the amortization schedule",
+            description = "Checks access, then asks loan servicing to store the schedule from the first due date.")
+    public Mono<BuiltSchedule> buildSchedule(@PathVariable UUID id, @RequestBody ScheduleBody body) {
+        return loanBookJourney.buildSchedule(id, body.firstDueDate());
+    }
+
+    @PostMapping(value = "/end-of-day", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Run end of day",
+            description = "Checks access, then accrues open loans for the business date and posts the journals.")
+    public Mono<EndOfDayRun> endOfDay(@RequestBody EndOfDayBody body) {
+        return loanBookJourney.endOfDay(body.businessDate());
     }
 
     @GetMapping(value = "/{id}/schedule", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -243,5 +260,11 @@ public class LoanServicingController {
             description = "Returns all notifications sent in connection with the loan.")
     public Flux<LoanNotificationDTO> getNotifications(@PathVariable UUID id) {
         return loanServicingService.getNotifications(id);
+    }
+
+    public record ScheduleBody(LocalDate firstDueDate) {
+    }
+
+    public record EndOfDayBody(LocalDate businessDate) {
     }
 }

@@ -89,6 +89,14 @@
         </dependency>
         <dependency>
             <groupId>io.fireflysoftware</groupId>
+            <artifactId>domain-lending-mortgage-sdk</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.fireflysoftware</groupId>
+            <artifactId>domain-lending-supply-chain-finance-sdk</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.fireflysoftware</groupId>
             <artifactId>domain-product-catalog-sdk</artifactId>
         </dependency>
         <dependency>

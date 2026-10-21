@@ -17,6 +17,7 @@
 
 package io.fireflysoftware.experience.lending.core.product;
 
+import io.fireflysoftware.domain.lending.loan.servicing.sdk.api.LoanServicingApi;
 import io.fireflysoftware.experience.lending.core.application.commands.CreateApplicationCommand;
 import io.fireflysoftware.experience.lending.core.application.ports.LoanApplicationPort;
 import io.fireflysoftware.experience.lending.core.application.queries.ApplicationDetailDTO;
@@ -41,6 +42,7 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -58,7 +60,7 @@ class LoanCustomerCommandServiceTest {
     @Mock private IdentityPort identityPort;
     @Mock private AccessPort accessPort;
     @Mock private LendingCatalogPort catalog;
-    @Mock private LoanCommandPort loanCommands;
+    @Mock private LoanServicingApi loanServicingApi;
     @Mock private CreditProductPort creditProducts;
     @Mock private PaymentsPort payments;
     @Mock private ContractReadPort contracts;
@@ -71,7 +73,7 @@ class LoanCustomerCommandServiceTest {
 
     @BeforeEach
     void setUp() {
-        servicing = new LoanCustomerCommandService(identityPort, accessPort, catalog, loanCommands,
+        servicing = new LoanCustomerCommandService(identityPort, accessPort, catalog, loanServicingApi,
                 creditProducts, payments, contracts);
         applications = new ApplicationServiceImpl(identityPort, accessPort, creditReports, decisions,
                 loanApplications, catalog, creditProducts, parameters());
@@ -97,7 +99,34 @@ class LoanCustomerCommandServiceTest {
 
         verify(payments).tryPayment(any());
         verify(payments).confirm(paymentId, null);
-        verify(loanCommands, never()).post(any(), any());
+        verify(loanServicingApi, never()).setFixedRate(any(), any(), any());
+        verify(loanServicingApi, never()).closeLoan(any(), any(), any());
+    }
+
+    @Test
+    void changeRateHolidayAndCloseCallLoanServicingSdk() {
+        UUID loanId = UUID.randomUUID();
+        when(catalog.loanOperation(LoanCustomerOperation.RATE_CHANGE)).thenReturn(Mono.just("/api/v1/loans/{loanId}/rate"));
+        when(catalog.loanOperation(LoanCustomerOperation.PAYMENT_HOLIDAY_GRANT)).thenReturn(Mono.just("/api/v1/loans/{loanId}/payment-holiday/grant"));
+        when(catalog.loanOperation(LoanCustomerOperation.PAYMENT_HOLIDAY_END)).thenReturn(Mono.just("/api/v1/loans/{loanId}/payment-holiday/end"));
+        when(catalog.loanOperation(LoanCustomerOperation.CLOSE)).thenReturn(Mono.just("/api/v1/loans/{loanId}/close"));
+        when(loanServicingApi.setFixedRate(eq(loanId.toString()), any(), any())).thenReturn(Mono.just(loanId));
+        when(loanServicingApi.grantPaymentHoliday(eq(loanId.toString()), any(), any())).thenReturn(Mono.just(loanId));
+        when(loanServicingApi.endPaymentHoliday(eq(loanId.toString()), any(), any())).thenReturn(Mono.just(loanId));
+        when(loanServicingApi.closeLoan(eq(loanId.toString()), any(), any())).thenReturn(Mono.just(loanId));
+
+        StepVerifier.create(servicing.changeRate(loanId, new BigDecimal("1.00"), new BigDecimal("2.00"),
+                        LocalDate.of(2026, 10, 21), RateChangeReason.RENEGOTIATION))
+                .verifyComplete();
+        StepVerifier.create(servicing.grantPaymentHoliday(loanId, "holiday")).verifyComplete();
+        StepVerifier.create(servicing.endPaymentHoliday(loanId, "resume")).verifyComplete();
+        StepVerifier.create(servicing.closeLoan(loanId, "paid")).verifyComplete();
+
+        verify(loanServicingApi).setFixedRate(eq(loanId.toString()), any(), any());
+        verify(loanServicingApi).grantPaymentHoliday(eq(loanId.toString()), any(), any());
+        verify(loanServicingApi).endPaymentHoliday(eq(loanId.toString()), any(), any());
+        verify(loanServicingApi).closeLoan(eq(loanId.toString()), any(), any());
+        verify(payments, never()).tryPayment(any());
     }
 
     @Test

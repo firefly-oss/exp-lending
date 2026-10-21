@@ -21,6 +21,7 @@ import io.fireflysoftware.experience.lending.core.servicing.commands.RequestEarl
 import io.fireflysoftware.experience.lending.core.servicing.commands.RequestRestructuringCommand;
 import io.fireflysoftware.experience.lending.core.servicing.queries.*;
 import io.fireflysoftware.experience.lending.core.servicing.services.AmortizationCalendarJourney;
+import io.fireflysoftware.experience.lending.core.servicing.services.LoanBookJourney;
 import io.fireflysoftware.experience.lending.core.servicing.services.LoanServicingService;
 import io.fireflysoftware.experience.lending.core.servicing.services.SyndicatedFacilityJourney;
 import org.fireflyframework.web.error.config.ErrorHandlingProperties;
@@ -64,6 +65,9 @@ class LoanServicingControllerTest {
 
     @MockitoBean
     private AmortizationCalendarJourney amortizationCalendarJourney;
+
+    @MockitoBean
+    private LoanBookJourney loanBookJourney;
 
     @MockitoBean
     private ExceptionConverterService exceptionConverterService;

@@ -20,5 +20,15 @@ package io.fireflysoftware.experience.lending.core.product;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-public record PaymentInstruction(UUID loanId, UUID installmentId, BigDecimal amount, PaymentKind kind) {
+public record PaymentInstruction(UUID loanId, UUID installmentId, BigDecimal amount, PaymentKind kind, PaymentPath path) {
+
+    public PaymentInstruction(UUID loanId, UUID installmentId, BigDecimal amount, PaymentKind kind) {
+        this(loanId, installmentId, amount, kind, PaymentPath.INTERNAL);
+    }
+
+    public PaymentInstruction {
+        if (path == null) {
+            path = PaymentPath.INTERNAL;
+        }
+    }
 }

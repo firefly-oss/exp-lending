@@ -19,14 +19,19 @@ package io.fireflysoftware.experience.lending.core.product;
 
 import reactor.core.publisher.Mono;
 
+import java.util.UUID;
+
 /**
- * Money movement for disbursement and installment payment.
+ * Payments for a loan disbursement or installment. Try, then confirm.
  * SandboxPaymentsAdapter is the class an installer replaces with the payments journey.
- * This port does not call the ledger, library-rails, or library-psps.
+ * This port does not run SCA, TCC, the ledger, library-rails, or library-psps.
  */
 public interface PaymentsPort {
 
-    Mono<PaymentReceipt> disburse(PaymentInstruction instruction);
+    Mono<PaymentTry> tryPayment(PaymentInstruction instruction);
 
-    Mono<PaymentReceipt> payInstallment(PaymentInstruction instruction);
+    /**
+     * @param sandboxResponse required when try returned a challenge; omitted for an internal try
+     */
+    Mono<PaymentReceipt> confirm(UUID paymentId, String sandboxResponse);
 }

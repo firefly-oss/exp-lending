@@ -30,6 +30,8 @@ import io.fireflysoftware.experience.lending.core.ports.DecisionPort;
 import io.fireflysoftware.experience.lending.core.ports.DecisionResult;
 import io.fireflysoftware.experience.lending.core.ports.IdentityPort;
 import io.fireflysoftware.experience.lending.core.ports.SubjectRef;
+import io.fireflysoftware.experience.lending.core.product.PaymentPath;
+import io.fireflysoftware.experience.lending.core.product.PaymentTry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -82,14 +84,19 @@ class LoanCustomerCommandServiceTest {
     @Test
     void disburseUsesPaymentsPortAndNotTheLoanSaga() {
         UUID loanId = UUID.randomUUID();
+        UUID paymentId = UUID.randomUUID();
         when(catalog.loanOperation(LoanCustomerOperation.DISBURSE)).thenReturn(Mono.just("payments"));
-        when(payments.disburse(any())).thenReturn(Mono.just(
-                new PaymentReceipt(UUID.randomUUID(), PaymentKind.DISBURSEMENT, new BigDecimal("10"), "sandbox", true)));
+        when(payments.tryPayment(any())).thenReturn(Mono.just(
+                new PaymentTry(paymentId, PaymentKind.DISBURSEMENT, PaymentPath.INTERNAL, null)));
+        when(payments.confirm(paymentId, null)).thenReturn(Mono.just(
+                new PaymentReceipt(paymentId, PaymentKind.DISBURSEMENT, new BigDecimal("10"), "sandbox", true)));
 
         StepVerifier.create(servicing.disburse(loanId, new BigDecimal("10")))
                 .expectNextCount(1)
                 .verifyComplete();
 
+        verify(payments).tryPayment(any());
+        verify(payments).confirm(paymentId, null);
         verify(loanCommands, never()).post(any(), any());
     }
 

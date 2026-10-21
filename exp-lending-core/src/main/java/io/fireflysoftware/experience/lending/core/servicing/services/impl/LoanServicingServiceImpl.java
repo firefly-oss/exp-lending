@@ -126,8 +126,12 @@ public class LoanServicingServiceImpl implements LoanServicingService {
 
     @Override
     public Mono<Void> requestEarlyRepayment(UUID loanId, RequestEarlyRepaymentCommand command) {
-        return update(loanId, () -> paymentsPort.payInstallment(new PaymentInstruction(
-                loanId, null, command.getAmount(), PaymentKind.INSTALLMENT)).then());
+        PaymentInstruction instruction = new PaymentInstruction(
+                loanId, null, command.getAmount(), PaymentKind.INSTALLMENT);
+        return update(loanId, () -> paymentsPort.tryPayment(instruction).flatMap(tried ->
+                paymentsPort.confirm(tried.paymentId(), tried.challengeId() == null
+                        ? null
+                        : io.fireflysoftware.experience.lending.core.adapter.SandboxPaymentsAdapter.SANDBOX_RESPONSE)).then());
     }
 
     @Override

@@ -17,6 +17,7 @@
 
 package io.fireflysoftware.experience.lending.core.product;
 
+import io.fireflysoftware.experience.lending.core.adapter.SandboxPaymentsAdapter;
 import io.fireflysoftware.experience.lending.core.application.queries.ApplicationDetailDTO;
 import io.fireflysoftware.experience.lending.core.ports.AccessAction;
 import io.fireflysoftware.experience.lending.core.ports.AccessGuard;
@@ -116,10 +117,8 @@ public class LoanCustomerCommandService {
                 () -> catalog.loanOperation(operation).flatMap(token -> {
                     PaymentInstruction instruction = new PaymentInstruction(loanId, installmentId, amount,
                             operation == LoanCustomerOperation.DISBURSE ? PaymentKind.DISBURSEMENT : PaymentKind.INSTALLMENT);
-                    if (operation == LoanCustomerOperation.DISBURSE) {
-                        return payments.disburse(instruction);
-                    }
-                    return payments.payInstallment(instruction);
+                    return payments.tryPayment(instruction).flatMap(tried ->
+                            payments.confirm(tried.paymentId(), tried.challengeId() == null ? null : SandboxPaymentsAdapter.SANDBOX_RESPONSE));
                 }));
     }
 

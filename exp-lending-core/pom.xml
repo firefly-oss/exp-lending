@@ -70,6 +70,10 @@
             <groupId>io.fireflysoftware</groupId>
             <artifactId>domain-common-notifications-sdk</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.fireflysoftware</groupId>
+            <artifactId>domain-payments-sdk</artifactId>
+        </dependency>
 
         <!-- Common Libraries -->
         <dependency>

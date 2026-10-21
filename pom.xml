@@ -84,6 +84,11 @@
                 <artifactId>domain-common-notifications-sdk</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>io.fireflysoftware</groupId>
+                <artifactId>domain-payments-sdk</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             <!-- Internal modules -->
             <dependency>
                 <groupId>io.fireflysoftware</groupId>

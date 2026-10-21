@@ -21,6 +21,7 @@ import io.fireflysoftware.experience.lending.core.servicing.commands.RequestEarl
 import io.fireflysoftware.experience.lending.core.servicing.commands.RequestRestructuringCommand;
 import io.fireflysoftware.experience.lending.core.servicing.queries.*;
 import io.fireflysoftware.experience.lending.core.servicing.services.LoanServicingService;
+import io.fireflysoftware.experience.lending.core.servicing.services.SyndicatedFacilityJourney;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +45,7 @@ import java.util.UUID;
 public class LoanServicingController {
 
     private final LoanServicingService loanServicingService;
+    private final SyndicatedFacilityJourney syndicatedFacilityJourney;
 
     @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get Loan",
@@ -51,6 +53,13 @@ public class LoanServicingController {
     public Mono<ResponseEntity<LoanDetailDTO>> getLoan(@PathVariable UUID id) {
         return loanServicingService.getLoan(id)
                 .map(ResponseEntity::ok);
+    }
+
+    @GetMapping(value = "/{id}/syndicated-facility", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "View syndicated facility",
+            description = "Shows the borrower the facility from the loan servicing domain. The response has no participant register.")
+    public Mono<ResponseEntity<SyndicatedFacilityView>> viewSyndicatedFacility(@PathVariable UUID id) {
+        return syndicatedFacilityJourney.view(id).map(ResponseEntity::ok);
     }
 
     @GetMapping(value = "/{id}/balance", produces = MediaType.APPLICATION_JSON_VALUE)

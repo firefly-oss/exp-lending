@@ -17,6 +17,11 @@
 
 package io.fireflysoftware.experience.lending.core.adapter;
 
+import io.fireflysoftware.domain.payments.sdk.api.PaymentsApi;
+import io.fireflysoftware.domain.payments.sdk.invoker.ApiClient;
+import io.fireflysoftware.domain.payments.sdk.model.Confirmation;
+import io.fireflysoftware.domain.payments.sdk.model.MovementCommand;
+import io.fireflysoftware.domain.payments.sdk.model.MovementResult;
 import io.fireflysoftware.experience.lending.core.product.PaymentInstruction;
 import io.fireflysoftware.experience.lending.core.product.PaymentKind;
 import io.fireflysoftware.experience.lending.core.product.PaymentPath;
@@ -26,125 +31,106 @@ import io.fireflysoftware.experience.lending.core.product.PaymentsPort;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Live payments port. Calls the payments hub try, confirm, and cancel routes.
+ * Live payments port. Calls the domain-payments SDK for try, confirm, and cancel.
  * Selected with {@code firefly.experience.payments.adapter=hub}. The sandbox adapter stays the default.
- * This class does not generate a challenge and does not treat a fixed word as a valid code.
+ * This class does not generate a challenge and does not treat the word sandbox as a valid code.
  */
 @Component
 @ConditionalOnProperty(name = "firefly.experience.payments.adapter", havingValue = "hub")
 public class HttpPaymentsAdapter implements PaymentsPort {
 
-    private static final ParameterizedTypeReference<Map<String, Object>> MAP = new ParameterizedTypeReference<>() {
-    };
+    private static final String OUTBOUND_SCHEME = "DOMESTIC_OUTBOUND";
+    private static final String INTERNAL_SCHEME = "INTERNAL_TRANSFER";
 
-    private final WebClient webClient;
+    private final PaymentsApi payments;
     private final ConcurrentHashMap<UUID, PaymentInstruction> started = new ConcurrentHashMap<>();
 
     @Autowired
     public HttpPaymentsAdapter(
             @Value("${api-configuration.domain-platform.payments.base-path:http://localhost:8092}") String basePath) {
-        this(WebClient.builder().baseUrl(basePath).build());
+        ApiClient apiClient = new ApiClient();
+        apiClient.setBasePath(basePath);
+        this.payments = new PaymentsApi(apiClient);
     }
 
     HttpPaymentsAdapter(WebClient webClient) {
-        this.webClient = webClient;
+        this.payments = new PaymentsApi(new ApiClient(webClient));
     }
 
     @Override
     public Mono<PaymentTry> tryPayment(PaymentInstruction instruction) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("scheme", instruction.path() == PaymentPath.OUTBOUND ? "DOMESTIC_OUTBOUND" : "INTERNAL_TRANSFER");
-        body.put("idempotencyKey", instruction.loanId() + ":" + instruction.kind().name() + ":" + instruction.amount());
-        body.put("amount", instruction.amount());
-        body.put("thirdPartyReference", instruction.installmentId() == null
+        String reference = instruction.installmentId() == null
                 ? instruction.loanId().toString()
-                : instruction.installmentId().toString());
-        return webClient.post().uri("/api/v1/payments/tries").bodyValue(body)
-                .retrieve()
-                .onStatus(HttpStatusCode::isError, response -> response.createException()
-                        .flatMap(error -> Mono.error(new IllegalStateException(
-                                "The payments hub returned HTTP " + response.statusCode().value(), error))))
-                .bodyToMono(MAP)
-                .map(payload -> {
-                    UUID paymentId = uuid(payload.get("paymentId"));
+                : instruction.installmentId().toString();
+        MovementCommand command = new MovementCommand()
+                .scheme(instruction.path() == PaymentPath.OUTBOUND ? OUTBOUND_SCHEME : INTERNAL_SCHEME)
+                .idempotencyKey(instruction.loanId() + ":" + instruction.kind().name() + ":" + instruction.amount())
+                .amount(instruction.amount())
+                .thirdPartyReference(reference);
+        return payments.tryPayment(command, null)
+                .onErrorMap(WebClientResponseException.class, HttpPaymentsAdapter::hubFailure)
+                .map(result -> {
+                    UUID paymentId = result.getPaymentId();
                     started.put(paymentId, instruction);
                     return new PaymentTry(
                             paymentId,
                             instruction.kind(),
                             instruction.path(),
-                            uuid(payload.get("challengeId")),
-                            text(payload.get("challengeValue")));
+                            result.getChallengeId(),
+                            challengeValue(result));
                 });
     }
 
     @Override
     public Mono<PaymentReceipt> confirm(UUID paymentId, String challengeResponse) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("response", challengeResponse);
-        return webClient.post().uri("/api/v1/payments/{paymentId}/confirmations", paymentId).bodyValue(body)
-                .retrieve()
-                .onStatus(HttpStatusCode::isError, response -> response.createException()
-                        .flatMap(error -> Mono.error(new IllegalStateException(
-                                "The payments hub returned HTTP " + response.statusCode().value(), error))))
-                .bodyToMono(MAP)
-                .map(payload -> receipt(paymentId, payload));
+        if (isSandboxWord(challengeResponse)) {
+            return Mono.error(new IllegalArgumentException("The word sandbox is not a valid challenge code"));
+        }
+        Confirmation confirmation = new Confirmation().response(challengeResponse);
+        return payments.confirmPayment(paymentId, confirmation, null)
+                .onErrorMap(WebClientResponseException.class, HttpPaymentsAdapter::hubFailure)
+                .map(result -> receipt(paymentId, result));
     }
 
     @Override
     public Mono<Void> cancel(UUID paymentId) {
-        return webClient.post().uri("/api/v1/payments/{paymentId}/cancellations", paymentId)
-                .retrieve()
-                .onStatus(HttpStatusCode::isError, response -> response.createException()
-                        .flatMap(error -> Mono.error(new IllegalStateException(
-                                "The payments hub returned HTTP " + response.statusCode().value(), error))))
-                .bodyToMono(MAP)
+        return payments.cancelPayment(paymentId, null)
+                .onErrorMap(WebClientResponseException.class, HttpPaymentsAdapter::hubFailure)
                 .then();
     }
 
-    private PaymentReceipt receipt(UUID paymentId, Map<String, Object> payload) {
+    private PaymentReceipt receipt(UUID paymentId, MovementResult result) {
         PaymentInstruction instruction = started.remove(paymentId);
         PaymentKind kind = instruction == null ? PaymentKind.DISBURSEMENT : instruction.kind();
-        BigDecimal amount = instruction == null ? decimal(payload.get("amount")) : instruction.amount();
-        UUID id = uuid(payload.get("paymentId"));
+        BigDecimal amount = instruction == null ? result.getAmount() : instruction.amount();
+        UUID id = result.getPaymentId();
         return new PaymentReceipt(id == null ? paymentId : id, kind, amount, "hub", false);
     }
 
-    private static UUID uuid(Object value) {
-        if (value == null) {
+    private static String challengeValue(MovementResult result) {
+        String value = result.getChallengeValue();
+        if (value == null || value.isBlank() || isSandboxWord(value)) {
             return null;
         }
-        String text = value.toString();
-        if (text.isBlank()) {
-            return null;
-        }
-        return UUID.fromString(text);
+        return value;
     }
 
-    private static String text(Object value) {
-        if (value == null) {
-            return null;
-        }
-        String text = value.toString();
-        return text.isBlank() ? null : text;
+    private static boolean isSandboxWord(String value) {
+        return value != null && "sandbox".equalsIgnoreCase(value.trim());
     }
 
-    private static BigDecimal decimal(Object value) {
-        if (value == null) {
-            return null;
-        }
-        return new BigDecimal(value.toString());
+    private static IllegalStateException hubFailure(WebClientResponseException error) {
+        return new IllegalStateException(
+                "The payments hub returned HTTP " + error.getStatusCode().value(), error);
     }
 }

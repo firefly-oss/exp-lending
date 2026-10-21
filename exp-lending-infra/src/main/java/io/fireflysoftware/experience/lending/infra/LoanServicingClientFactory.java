@@ -19,6 +19,7 @@ package io.fireflysoftware.experience.lending.infra;
 
 import io.fireflysoftware.domain.lending.loan.servicing.sdk.api.LoanServicingApi;
 import io.fireflysoftware.domain.lending.loan.servicing.sdk.api.LoanServicingQueriesApi;
+import io.fireflysoftware.domain.lending.loan.servicing.sdk.api.SyndicatedFacilityApi;
 import io.fireflysoftware.domain.lending.loan.servicing.sdk.invoker.ApiClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
@@ -45,5 +46,10 @@ public class LoanServicingClientFactory {
     @Bean
     public LoanServicingQueriesApi loanServicingQueriesApi() {
         return new LoanServicingQueriesApi(apiClient);
+    }
+
+    @Bean
+    public SyndicatedFacilityApi syndicatedFacilityApi() {
+        return new SyndicatedFacilityApi(apiClient);
     }
 }

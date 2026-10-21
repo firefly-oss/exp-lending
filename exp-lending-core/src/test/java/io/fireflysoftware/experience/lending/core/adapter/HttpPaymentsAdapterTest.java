@@ -97,6 +97,22 @@ class HttpPaymentsAdapterTest {
     }
 
     @Test
+    void confirmRejectsTheWordSandboxBeforeCallingTheHub() {
+        AtomicReference<String> path = new AtomicReference<>();
+        WebClient client = WebClient.builder().exchangeFunction(request -> {
+            path.set(request.url().getPath());
+            return MonoResponse.ok("{}");
+        }).build();
+
+        StepVerifier.create(new HttpPaymentsAdapter(client).confirm(UUID.randomUUID(), "sandbox"))
+                .expectErrorSatisfies(error -> assertThat(error)
+                        .isInstanceOf(IllegalArgumentException.class)
+                        .hasMessageContaining("sandbox"))
+                .verify();
+        assertThat(path.get()).isNull();
+    }
+
+    @Test
     void cancelPostsTheHubCancellation() {
         UUID paymentId = UUID.randomUUID();
         AtomicReference<String> path = new AtomicReference<>();

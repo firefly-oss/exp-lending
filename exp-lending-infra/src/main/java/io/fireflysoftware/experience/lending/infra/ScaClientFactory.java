@@ -17,24 +17,36 @@
 
 package io.fireflysoftware.experience.lending.infra;
 
+import io.fireflysoftware.domain.common.sca.sdk.api.ScaOperationsApi;
+import io.fireflysoftware.domain.common.sca.sdk.invoker.ApiClient;
+import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 
 /**
- * Factory placeholder for the Common SCA (Strong Customer Authentication) service.
- * <p>
- * The {@code domain-common-sca-sdk} artifact is currently being built; until its
- * OpenAPI generation is complete, ScaOperationsApi is not available.
- * This factory is retained as a placeholder for when the SCA SDK is ready.
+ * Factory that creates the SCA SDK client for challenge generation and attempt verification.
  */
 @Component
 public class ScaClientFactory {
 
+    private final ApiClient apiClient;
+
     /**
-     * Initialises the factory with the base path from configuration properties.
+     * Initialises the API client with the base path from configuration properties.
      *
      * @param properties connection properties for the Common SCA service
      */
     public ScaClientFactory(ScaProperties properties) {
-        // SCA client will be configured here once ScaOperationsApi is available
+        this.apiClient = new ApiClient();
+        this.apiClient.setBasePath(properties.getBasePath());
+    }
+
+    /**
+     * Provides the {@link ScaOperationsApi} bean for SCA challenge and verification calls.
+     *
+     * @return a ready-to-use SCA operations client
+     */
+    @Bean
+    public ScaOperationsApi scaOperationsApi() {
+        return new ScaOperationsApi(apiClient);
     }
 }

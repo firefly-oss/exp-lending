@@ -75,10 +75,13 @@ public class PersonalLoansServiceImpl implements PersonalLoansService {
 
     @Override
     public Flux<PersonalLoanSummaryDTO> listAgreements() {
-        // MVP: domain-lending-personal-loans-sdk does not expose a findAll agreements
-        // endpoint. Replace when upstream adds a paginated agreements resource.
-        log.debug("Listing personal loan agreements (MVP stub)");
-        return Flux.empty();
+        log.debug("Listing personal loan agreements");
+        return personalLoansApi.listAgreements(UUID.randomUUID().toString())
+                .flatMapMany(page -> {
+                    var content = page.getContent();
+                    return content == null ? Flux.empty() : Flux.fromIterable(content);
+                })
+                .map(this::toSummary);
     }
 
     @Override

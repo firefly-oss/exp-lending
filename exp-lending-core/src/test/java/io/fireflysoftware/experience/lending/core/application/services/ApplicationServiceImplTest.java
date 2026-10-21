@@ -17,7 +17,9 @@
 
 package io.fireflysoftware.experience.lending.core.application.services;
 
-import io.fireflysoftware.domain.common.contracts.sdk.api.KitDocumentsApi;
+import io.fireflysoftware.domain.common.contracts.sdk.api.KitDocumentsControllerApi;
+import io.fireflysoftware.domain.common.contracts.sdk.model.IssueBody;
+import io.fireflysoftware.domain.common.contracts.sdk.model.RecordedId;
 import io.fireflysoftware.domain.lending.loan.origination.sdk.api.LoanOriginationApi;
 import io.fireflysoftware.domain.lending.loan.origination.sdk.model.LoanApplicationDTO;
 import io.fireflysoftware.domain.lending.loan.origination.sdk.model.SubmitApplicationCommand;
@@ -52,13 +54,13 @@ class ApplicationServiceImplTest {
     @Mock
     private LoanOriginationApi loanOriginationApi;
     @Mock
-    private KitDocumentsApi kitDocumentsApi;
+    private KitDocumentsControllerApi kitDocumentsApi;
 
     private DomainLoanApplicationAdapter service;
 
     @BeforeEach
     void setUp() {
-        lenient().when(kitDocumentsApi.issue(any(), any(), any(), any())).thenReturn(Mono.just(UUID.randomUUID()));
+        lenient().when(kitDocumentsApi.issue(any(), any())).thenReturn(Mono.just(new RecordedId().id(UUID.randomUUID())));
         service = new DomainLoanApplicationAdapter(loanOriginationApi, kitDocumentsApi);
     }
 
@@ -96,7 +98,10 @@ class ApplicationServiceImplTest {
                     assertThat(result.getPurpose()).isEqualTo("PERSONAL");
                 })
                 .verifyComplete();
-        verify(kitDocumentsApi).issue(eq("contract"), any(), eq(applicationId), any());
+        verify(kitDocumentsApi).issue(org.mockito.ArgumentMatchers.argThat(body ->
+                body instanceof IssueBody issue
+                        && "contract".equals(issue.getTemplateCode())
+                        && applicationId.equals(issue.getContractId())), any());
     }
 
     @Test

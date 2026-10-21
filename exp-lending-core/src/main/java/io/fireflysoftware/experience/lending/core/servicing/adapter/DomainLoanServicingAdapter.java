@@ -19,6 +19,8 @@ package io.fireflysoftware.experience.lending.core.servicing.adapter;
 
 import io.fireflysoftware.domain.lending.loan.servicing.sdk.api.LoanServicingApi;
 import io.fireflysoftware.domain.lending.loan.servicing.sdk.api.LoanServicingQueriesApi;
+import io.fireflysoftware.domain.lending.loan.servicing.sdk.model.ApplyRepaymentCommand;
+import io.fireflysoftware.domain.lending.loan.servicing.sdk.model.ApplyRestructureCommand;
 import io.fireflysoftware.domain.lending.loan.servicing.sdk.model.LoanAccrualDTO;
 import io.fireflysoftware.domain.lending.loan.servicing.sdk.model.LoanBalanceDTO;
 import io.fireflysoftware.domain.lending.loan.servicing.sdk.model.LoanDisbursementDTO;
@@ -181,7 +183,11 @@ public class DomainLoanServicingAdapter implements LoanServicingPort {
     public Mono<Void> requestEarlyRepayment(UUID loanId, RequestEarlyRepaymentCommand command) {
         log.debug("Requesting early repayment loanId={}", loanId);
         return loanServicingApi
-                .applyRepayment(loanId.toString(), command.getAmount(), UUID.randomUUID().toString())
+                .applyRepayment(loanId.toString(), new ApplyRepaymentCommand()
+                        .paymentAmount(command.getAmount())
+                        .paymentDate(LocalDate.now())
+                        .transactionId(UUID.randomUUID())
+                        .isPartialPayment(!"FULL".equals(command.getType())), UUID.randomUUID().toString())
                 .then();
     }
 
@@ -253,7 +259,8 @@ public class DomainLoanServicingAdapter implements LoanServicingPort {
     public Mono<RestructuringDTO> requestRestructuring(UUID loanId, RequestRestructuringCommand command) {
         log.debug("Requesting restructuring loanId={}", loanId);
         return loanServicingApi
-                .applyRestructure(loanId.toString(), command.getReason(), UUID.randomUUID().toString())
+                .applyRestructure(loanId.toString(), new ApplyRestructureCommand().reason(command.getReason()),
+                        UUID.randomUUID().toString())
                 .map(item -> {
                     var jsonMap = objectMapper.convertValue(item, Map.class);
                     UUID restructuringId = jsonMap.get("loanRestructuringId") != null

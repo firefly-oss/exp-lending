@@ -20,6 +20,7 @@ package io.fireflysoftware.experience.lending.web.controllers;
 import io.fireflysoftware.experience.lending.core.servicing.commands.RequestEarlyRepaymentCommand;
 import io.fireflysoftware.experience.lending.core.servicing.commands.RequestRestructuringCommand;
 import io.fireflysoftware.experience.lending.core.servicing.queries.*;
+import io.fireflysoftware.experience.lending.core.servicing.services.AmortizationCalendarJourney;
 import io.fireflysoftware.experience.lending.core.servicing.services.LoanServicingService;
 import io.fireflysoftware.experience.lending.core.servicing.services.SyndicatedFacilityJourney;
 import io.swagger.v3.oas.annotations.Operation;
@@ -46,6 +47,7 @@ public class LoanServicingController {
 
     private final LoanServicingService loanServicingService;
     private final SyndicatedFacilityJourney syndicatedFacilityJourney;
+    private final AmortizationCalendarJourney amortizationCalendarJourney;
 
     @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get Loan",
@@ -76,6 +78,13 @@ public class LoanServicingController {
     public Mono<ResponseEntity<BalanceHistoryDTO>> getBalanceHistory(@PathVariable UUID id) {
         return loanServicingService.getBalanceHistory(id)
                 .map(ResponseEntity::ok);
+    }
+
+    @GetMapping(value = "/{id}/calendar", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Read amortization calendar",
+            description = "Reads the amortization calendar from the loan servicing domain, including each remaining balance.")
+    public Flux<AmortizationCalendarRow> readAmortizationCalendar(@PathVariable UUID id) {
+        return amortizationCalendarJourney.read(id);
     }
 
     @GetMapping(value = "/{id}/schedule", produces = MediaType.APPLICATION_JSON_VALUE)

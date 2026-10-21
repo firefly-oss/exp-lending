@@ -20,6 +20,7 @@ package io.fireflysoftware.experience.lending.web.controllers;
 import io.fireflysoftware.experience.lending.core.servicing.commands.RequestEarlyRepaymentCommand;
 import io.fireflysoftware.experience.lending.core.servicing.commands.RequestRestructuringCommand;
 import io.fireflysoftware.experience.lending.core.servicing.queries.*;
+import io.fireflysoftware.experience.lending.core.servicing.services.AmortizationCalendarJourney;
 import io.fireflysoftware.experience.lending.core.servicing.services.LoanServicingService;
 import io.fireflysoftware.experience.lending.core.servicing.services.SyndicatedFacilityJourney;
 import org.fireflyframework.web.error.config.ErrorHandlingProperties;
@@ -60,6 +61,9 @@ class LoanServicingControllerTest {
 
     @MockitoBean
     private SyndicatedFacilityJourney syndicatedFacilityJourney;
+
+    @MockitoBean
+    private AmortizationCalendarJourney amortizationCalendarJourney;
 
     @MockitoBean
     private ExceptionConverterService exceptionConverterService;
@@ -152,6 +156,28 @@ class LoanServicingControllerTest {
                 .expectStatus().isOk()
                 .expectBody(BalanceHistoryDTO.class)
                 .value(body -> assertThat(body.getEntries()).isEmpty());
+    }
+
+    @Test
+    void readAmortizationCalendar_returnsRemainingBalance() {
+        var loanId = UUID.randomUUID();
+        var row = new AmortizationCalendarRow(
+                1, LocalDate.of(2026, 2, 1),
+                new BigDecimal("88.00"), new BigDecimal("12.00"), new BigDecimal("1112.00"));
+        when(amortizationCalendarJourney.read(eq(loanId))).thenReturn(Flux.just(row));
+
+        webTestClient.get()
+                .uri(BASE + "/{id}/calendar", loanId)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(AmortizationCalendarRow.class)
+                .value(list -> {
+                    assertThat(list).hasSize(1);
+                    assertThat(list.get(0).dueDate()).isEqualTo(LocalDate.of(2026, 2, 1));
+                    assertThat(list.get(0).principal()).isEqualByComparingTo("88.00");
+                    assertThat(list.get(0).interest()).isEqualByComparingTo("12.00");
+                    assertThat(list.get(0).remainingBalance()).isEqualByComparingTo("1112.00");
+                });
     }
 
     // --- GET /loans/{id}/schedule ---

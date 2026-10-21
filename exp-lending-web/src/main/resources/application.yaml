@@ -47,6 +47,8 @@ api-configuration:
       base-path: ${ENDPOINT_DOMAIN_COMMON_SCA:http://localhost:8041}
     common-notifications:
       base-path: ${ENDPOINT_DOMAIN_COMMON_NOTIFICATIONS:http://localhost:8095}
+    payments:
+      base-path: ${ENDPOINT_DOMAIN_PAYMENTS:http://localhost:8092}
 springdoc:
   packages-to-scan: io.fireflysoftware.experience.lending.web.controllers
   paths-to-match: /api/**

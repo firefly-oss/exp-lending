@@ -67,6 +67,15 @@ public class SandboxPaymentsAdapter implements PaymentsPort {
         return Mono.just(new PaymentReceipt(paymentId, held.instruction().kind(), held.instruction().amount(), "sandbox", true));
     }
 
+    @Override
+    public Mono<Void> cancel(UUID paymentId) {
+        Pending held = pending.remove(paymentId);
+        if (held == null) {
+            return Mono.error(new PaymentNotConfirmedException("PAYMENT_NOT_CONFIRMED"));
+        }
+        return Mono.empty();
+    }
+
     private record Pending(PaymentInstruction instruction, UUID challengeId, String challengeValue) {
     }
 

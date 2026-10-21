@@ -31,7 +31,9 @@ public interface PaymentsPort {
     Mono<PaymentTry> tryPayment(PaymentInstruction instruction);
 
     /**
-     * @param sandboxResponse the {@code challengeValue} returned by try; omitted for an internal try
+     * @param challengeResponse the challenge value returned by try; omitted for an internal try
      */
-    Mono<PaymentReceipt> confirm(UUID paymentId, String sandboxResponse);
+    Mono<PaymentReceipt> confirm(UUID paymentId, String challengeResponse);
+
+    Mono<Void> cancel(UUID paymentId);
 }

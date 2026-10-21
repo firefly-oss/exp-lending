@@ -38,22 +38,20 @@ import java.util.concurrent.ConcurrentHashMap;
 @ConditionalOnProperty(name = "firefly.experience.payments.adapter", havingValue = "sandbox", matchIfMissing = true)
 public class SandboxPaymentsAdapter implements PaymentsPort {
 
-    /**
-     * Response an outbound confirm must submit. A different value does not confirm.
-     */
-    public static final String SANDBOX_RESPONSE = "sandbox";
-
     private final ConcurrentHashMap<UUID, Pending> pending = new ConcurrentHashMap<>();
 
     @Override
     public Mono<PaymentTry> tryPayment(PaymentInstruction instruction) {
         UUID paymentId = UUID.nameUUIDFromBytes((instruction.loanId() + ":" + instruction.kind().name()
                 + ":" + instruction.amount() + ":" + instruction.path().name()).getBytes(StandardCharsets.UTF_8));
-        UUID challengeId = instruction.path() == PaymentPath.OUTBOUND
-                ? UUID.nameUUIDFromBytes(("challenge:" + paymentId).getBytes(StandardCharsets.UTF_8))
-                : null;
-        pending.put(paymentId, new Pending(instruction, challengeId));
-        return Mono.just(new PaymentTry(paymentId, instruction.kind(), instruction.path(), challengeId));
+        UUID challengeId = null;
+        String challengeValue = null;
+        if (instruction.path() == PaymentPath.OUTBOUND) {
+            challengeId = UUID.nameUUIDFromBytes(("challenge:" + paymentId).getBytes(StandardCharsets.UTF_8));
+            challengeValue = challengeId.toString().replace("-", "");
+        }
+        pending.put(paymentId, new Pending(instruction, challengeId, challengeValue));
+        return Mono.just(new PaymentTry(paymentId, instruction.kind(), instruction.path(), challengeId, challengeValue));
     }
 
     @Override
@@ -62,14 +60,14 @@ public class SandboxPaymentsAdapter implements PaymentsPort {
         if (held == null) {
             return Mono.error(new PaymentNotConfirmedException("PAYMENT_NOT_CONFIRMED"));
         }
-        if (held.challengeId() != null && !SANDBOX_RESPONSE.equals(sandboxResponse)) {
+        if (held.challengeValue() != null && !held.challengeValue().equals(sandboxResponse)) {
             return Mono.error(new PaymentNotConfirmedException("PAYMENT_NOT_CONFIRMED"));
         }
         pending.remove(paymentId, held);
         return Mono.just(new PaymentReceipt(paymentId, held.instruction().kind(), held.instruction().amount(), "sandbox", true));
     }
 
-    private record Pending(PaymentInstruction instruction, UUID challengeId) {
+    private record Pending(PaymentInstruction instruction, UUID challengeId, String challengeValue) {
     }
 
     /**

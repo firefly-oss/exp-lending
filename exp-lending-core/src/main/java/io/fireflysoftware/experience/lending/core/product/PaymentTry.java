@@ -20,7 +20,9 @@ package io.fireflysoftware.experience.lending.core.product;
 import java.util.UUID;
 
 /**
- * Result of try. {@code challengeId} is set for an outbound try and absent for an internal try.
+ * Result of try. An outbound try returns {@code challengeId} and {@code challengeValue}.
+ * An internal try has neither. The value is the sandbox delivery of the challenge
+ * because no SMS adapter is connected. Confirm accepts only that value.
  */
-public record PaymentTry(UUID paymentId, PaymentKind kind, PaymentPath path, UUID challengeId) {
+public record PaymentTry(UUID paymentId, PaymentKind kind, PaymentPath path, UUID challengeId, String challengeValue) {
 }

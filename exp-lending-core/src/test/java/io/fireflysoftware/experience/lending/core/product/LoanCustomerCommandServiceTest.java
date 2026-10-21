@@ -87,7 +87,7 @@ class LoanCustomerCommandServiceTest {
         UUID paymentId = UUID.randomUUID();
         when(catalog.loanOperation(LoanCustomerOperation.DISBURSE)).thenReturn(Mono.just("payments"));
         when(payments.tryPayment(any())).thenReturn(Mono.just(
-                new PaymentTry(paymentId, PaymentKind.DISBURSEMENT, PaymentPath.INTERNAL, null)));
+                new PaymentTry(paymentId, PaymentKind.DISBURSEMENT, PaymentPath.INTERNAL, null, null)));
         when(payments.confirm(paymentId, null)).thenReturn(Mono.just(
                 new PaymentReceipt(paymentId, PaymentKind.DISBURSEMENT, new BigDecimal("10"), "sandbox", true)));
 

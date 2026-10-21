@@ -40,12 +40,18 @@ class SandboxPaymentsAdapterTest {
 
         PaymentTry tried = adapter.tryPayment(instruction).block();
         assertThat(tried.challengeId()).isNotNull();
+        assertThat(tried.challengeValue()).isNotBlank();
+        assertThat(tried.challengeValue()).isNotEqualTo("sandbox");
+
+        StepVerifier.create(adapter.confirm(tried.paymentId(), "sandbox"))
+                .expectError(SandboxPaymentsAdapter.PaymentNotConfirmedException.class)
+                .verify();
 
         StepVerifier.create(adapter.confirm(tried.paymentId(), "wrong"))
                 .expectError(SandboxPaymentsAdapter.PaymentNotConfirmedException.class)
                 .verify();
 
-        StepVerifier.create(adapter.confirm(tried.paymentId(), SandboxPaymentsAdapter.SANDBOX_RESPONSE))
+        StepVerifier.create(adapter.confirm(tried.paymentId(), tried.challengeValue()))
                 .assertNext(receipt -> assertThat(receipt.paymentId()).isEqualTo(tried.paymentId()))
                 .verifyComplete();
     }
@@ -57,6 +63,7 @@ class SandboxPaymentsAdapterTest {
 
         PaymentTry tried = adapter.tryPayment(instruction).block();
         assertThat(tried.challengeId()).isNull();
+        assertThat(tried.challengeValue()).isNull();
 
         StepVerifier.create(adapter.confirm(tried.paymentId(), null))
                 .assertNext(receipt -> {

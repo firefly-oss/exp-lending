@@ -17,7 +17,6 @@
 
 package io.fireflysoftware.experience.lending.core.adapter;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.fireflysoftware.experience.lending.core.ports.AccessDecision;
 import io.fireflysoftware.experience.lending.core.ports.AccessPort;
 import io.fireflysoftware.experience.lending.core.ports.AccessRequest;
@@ -76,9 +75,11 @@ public class DomainAccessConfiguration {
                     .uri("/api/v1/identity/subjects")
                     .bodyValue(body)
                     .retrieve()
-                    .bodyToMono(JsonNode.class)
-                    .map(node -> new SubjectRef(UUID.fromString(node.path("actorId").asText()),
-                            node.path("provider").asText(null)));
+                    .bodyToMono(IdentityPayload.class)
+                    .map(payload -> new SubjectRef(UUID.fromString(payload.actorId()), payload.provider()));
+        }
+
+        private record IdentityPayload(String actorId, String provider) {
         }
     }
 
@@ -101,10 +102,13 @@ public class DomainAccessConfiguration {
                     .uri("/api/v1/access/checks")
                     .bodyValue(body)
                     .retrieve()
-                    .bodyToMono(JsonNode.class)
-                    .map(node -> node.path("allowed").asBoolean(false)
-                            ? AccessDecision.permit(node.path("reasonCode").asText("SANDBOX_GRANT"))
-                            : AccessDecision.denied(node.path("reasonCode").asText("ACTOR_NOT_ENTITLED")));
+                    .bodyToMono(AccessPayload.class)
+                    .map(payload -> Boolean.TRUE.equals(payload.allowed())
+                            ? AccessDecision.permit(payload.reasonCode() == null ? "SANDBOX_GRANT" : payload.reasonCode())
+                            : AccessDecision.denied(payload.reasonCode() == null ? "ACTOR_NOT_ENTITLED" : payload.reasonCode()));
+        }
+
+        private record AccessPayload(Boolean allowed, String reasonCode) {
         }
     }
 }

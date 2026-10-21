@@ -66,30 +66,6 @@ class LoanServicingControllerTest {
 
     private static final String BASE = "/api/v1/experience/lending/loans";
 
-    // --- GET /loans ---
-
-    @Test
-    void listLoans_returns200WithSummaries() {
-        var loanId = UUID.randomUUID();
-        var summary = LoanSummaryDTO.builder()
-                .loanId(loanId)
-                .status("ACTIVE")
-                .build();
-
-        when(loanServicingService.listLoans()).thenReturn(Flux.just(summary));
-
-        webTestClient.get()
-                .uri(BASE)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBodyList(LoanSummaryDTO.class)
-                .value(list -> {
-                    assertThat(list).hasSize(1);
-                    assertThat(list.get(0).getLoanId()).isEqualTo(loanId);
-                    assertThat(list.get(0).getStatus()).isEqualTo("ACTIVE");
-                });
-    }
-
     // --- GET /loans/{id} ---
 
     @Test
@@ -477,19 +453,6 @@ class LoanServicingControllerTest {
 
         webTestClient.get()
                 .uri(BASE + "/{id}/restructurings", loanId)
-                .exchange()
-                .expectStatus().isOk();
-    }
-
-    // --- GET /loans/{id}/documents ---
-
-    @Test
-    void getDocuments_returns200() {
-        var loanId = UUID.randomUUID();
-        when(loanServicingService.getDocuments(eq(loanId))).thenReturn(Flux.empty());
-
-        webTestClient.get()
-                .uri(BASE + "/{id}/documents", loanId)
                 .exchange()
                 .expectStatus().isOk();
     }

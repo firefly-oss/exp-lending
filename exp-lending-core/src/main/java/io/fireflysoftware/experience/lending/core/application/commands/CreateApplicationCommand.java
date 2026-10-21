@@ -59,4 +59,10 @@ public class CreateApplicationCommand {
     private Integer term;
 
     private String purpose;
+
+    /**
+     * Party the decision is about. Sent to {@code POST /api/v1/decisions}.
+     * When omitted, the product id is used so the decision contract still has a party id.
+     */
+    private UUID partyId;
 }

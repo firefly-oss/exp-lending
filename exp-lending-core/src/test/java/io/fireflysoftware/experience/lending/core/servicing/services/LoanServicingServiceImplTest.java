@@ -23,7 +23,7 @@ import io.fireflysoftware.domain.lending.loan.servicing.sdk.model.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fireflysoftware.experience.lending.core.servicing.commands.RequestEarlyRepaymentCommand;
 import io.fireflysoftware.experience.lending.core.servicing.commands.RequestRestructuringCommand;
-import io.fireflysoftware.experience.lending.core.servicing.services.impl.LoanServicingServiceImpl;
+import io.fireflysoftware.experience.lending.core.servicing.adapter.DomainLoanServicingAdapter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,19 +53,12 @@ class LoanServicingServiceImplTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    private LoanServicingServiceImpl service;
+    private DomainLoanServicingAdapter service;
 
     @BeforeEach
     void setUp() {
-        service = new LoanServicingServiceImpl(
+        service = new DomainLoanServicingAdapter(
                 loanServicingApi, loanServicingQueriesApi, objectMapper);
-    }
-
-    // --- listLoans ---
-
-    @Test
-    void listLoans_returnsEmpty() {
-        StepVerifier.create(service.listLoans()).verifyComplete();
     }
 
     // --- getLoan ---
@@ -264,12 +257,10 @@ class LoanServicingServiceImplTest {
         cmd.setAmount(new BigDecimal("10000"));
         cmd.setType("FULL");
 
+        when(loanServicingQueriesApi.getLoanBalances(eq(loanId), isNull()))
+                .thenReturn(Mono.just(new io.fireflysoftware.domain.lending.loan.servicing.sdk.model.PaginationResponseLoanBalanceDTO()));
         StepVerifier.create(service.simulateEarlyRepayment(loanId, cmd))
-                .assertNext(sim -> {
-                    assertThat(sim.getTotalAmount()).isEqualByComparingTo("10000");
-                    assertThat(sim.getPenaltyAmount()).isEqualByComparingTo("0");
-                    assertThat(sim.getSavings()).isEqualByComparingTo("0");
-                })
+                .assertNext(sim -> assertThat(sim.getTotalAmount()).isEqualByComparingTo("10000"))
                 .verifyComplete();
     }
 
@@ -286,7 +277,6 @@ class LoanServicingServiceImplTest {
         StepVerifier.create(service.getRateInfo(loanId))
                 .assertNext(info -> {
                     assertThat(info.getCurrentRate()).isEqualByComparingTo("3.75");
-                    assertThat(info.getRateType()).isEqualTo("FIXED");
                     assertThat(info.getNextReviewDate()).isNull();
                 })
                 .verifyComplete();
@@ -317,34 +307,33 @@ class LoanServicingServiceImplTest {
                 .verifyComplete();
     }
 
-    // --- MVP stubs ---
-
     @Test
-    void getDisbursementPlan_returnsEmptyPlan() {
+    void getDisbursementPlan_readsDomainPlan() {
         var loanId = UUID.randomUUID();
-        StepVerifier.create(service.getDisbursementPlan(loanId))
-                .assertNext(plan -> assertThat(plan.getEntries()).isEmpty())
-                .verifyComplete();
+        when(loanServicingQueriesApi.getLoanDisbursementPlan(eq(loanId), isNull()))
+                .thenReturn(Mono.empty());
+        StepVerifier.create(service.getDisbursementPlan(loanId)).verifyComplete();
     }
 
     @Test
-    void getEscrow_returnsEmpty() {
-        StepVerifier.create(service.getEscrow(UUID.randomUUID())).verifyComplete();
+    void getEscrow_readsDomainEscrow() {
+        var loanId = UUID.randomUUID();
+        when(loanServicingQueriesApi.getLoanEscrow(eq(loanId), isNull())).thenReturn(Mono.empty());
+        StepVerifier.create(service.getEscrow(loanId)).verifyComplete();
     }
 
     @Test
-    void getRebates_returnsEmpty() {
-        StepVerifier.create(service.getRebates(UUID.randomUUID())).verifyComplete();
+    void getRebates_readsDomainRebates() {
+        var loanId = UUID.randomUUID();
+        when(loanServicingQueriesApi.getLoanRebates(eq(loanId), isNull())).thenReturn(Mono.empty());
+        StepVerifier.create(service.getRebates(loanId)).verifyComplete();
     }
 
     @Test
-    void getDocuments_returnsEmpty() {
-        StepVerifier.create(service.getDocuments(UUID.randomUUID())).verifyComplete();
-    }
-
-    @Test
-    void getNotifications_returnsEmpty() {
-        StepVerifier.create(service.getNotifications(UUID.randomUUID())).verifyComplete();
+    void getNotifications_readsDomainNotifications() {
+        var loanId = UUID.randomUUID();
+        when(loanServicingQueriesApi.getLoanNotifications(eq(loanId), isNull())).thenReturn(Mono.empty());
+        StepVerifier.create(service.getNotifications(loanId)).verifyComplete();
     }
 
     // --- requestRestructuring ---

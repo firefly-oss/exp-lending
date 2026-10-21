@@ -67,13 +67,6 @@ public class ApplicationController {
                 .map(result -> ResponseEntity.status(HttpStatus.CREATED).body(result));
     }
 
-    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "List Applications",
-            description = "Returns all loan applications accessible to the caller.")
-    public Flux<ApplicationSummaryDTO> listApplications() {
-        return applicationService.listApplications();
-    }
-
     @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get Application",
             description = "Retrieves the full details of a loan application by its identifier.")

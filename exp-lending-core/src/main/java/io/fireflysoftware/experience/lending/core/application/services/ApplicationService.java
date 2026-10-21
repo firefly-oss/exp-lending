@@ -37,8 +37,6 @@ public interface ApplicationService {
 
     Mono<ApplicationDetailDTO> createApplication(CreateApplicationCommand command);
 
-    Flux<ApplicationSummaryDTO> listApplications();
-
     Mono<ApplicationDetailDTO> getApplication(UUID applicationId);
 
     Mono<ApplicationDetailDTO> updateApplication(UUID applicationId, UpdateApplicationCommand command);

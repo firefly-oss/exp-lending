@@ -31,8 +31,6 @@ import java.util.UUID;
  */
 public interface LoanServicingService {
 
-    Flux<LoanSummaryDTO> listLoans();
-
     Mono<LoanDetailDTO> getLoan(UUID loanId);
 
     Mono<BalanceDTO> getBalance(UUID loanId);
@@ -72,8 +70,6 @@ public interface LoanServicingService {
     Mono<RestructuringDTO> requestRestructuring(UUID loanId, RequestRestructuringCommand command);
 
     Flux<RestructuringDTO> getRestructurings(UUID loanId);
-
-    Flux<LoanDocumentDTO> getDocuments(UUID loanId);
 
     Flux<LoanEventDTO> getEvents(UUID loanId);
 

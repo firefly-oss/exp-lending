@@ -22,7 +22,7 @@ import io.fireflysoftware.domain.lending.loan.origination.sdk.model.LoanApplicat
 import io.fireflysoftware.domain.lending.loan.origination.sdk.model.SubmitApplicationCommand;
 import io.fireflysoftware.experience.lending.core.application.commands.CreateApplicationCommand;
 import io.fireflysoftware.experience.lending.core.application.commands.UpdateApplicationCommand;
-import io.fireflysoftware.experience.lending.core.application.services.impl.ApplicationServiceImpl;
+import io.fireflysoftware.experience.lending.core.application.adapter.DomainLoanApplicationAdapter;
 import org.fireflyframework.web.error.exceptions.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,11 +50,11 @@ class ApplicationServiceImplTest {
     @Mock
     private LoanOriginationApi loanOriginationApi;
 
-    private ApplicationServiceImpl service;
+    private DomainLoanApplicationAdapter service;
 
     @BeforeEach
     void setUp() {
-        service = new ApplicationServiceImpl(loanOriginationApi);
+        service = new DomainLoanApplicationAdapter(loanOriginationApi);
     }
 
     @Test
@@ -197,12 +197,6 @@ class ApplicationServiceImplTest {
     }
 
     @Test
-    void listApplications_returnsEmpty() {
-        StepVerifier.create(service.listApplications())
-                .verifyComplete();
-    }
-
-    @Test
     void getApplication_delegatesToOriginationApi_andMapsResult() {
         var applicationId = UUID.randomUUID();
         var dto = new LoanApplicationDTO()
@@ -267,14 +261,13 @@ class ApplicationServiceImplTest {
     }
 
     @Test
-    void getStatusHistory_returnsEmptyEntries() {
+    void getStatusHistory_readsDomainDecisions() {
         var applicationId = UUID.randomUUID();
+        var page = new io.fireflysoftware.domain.lending.loan.origination.sdk.model.PaginationResponseUnderwritingDecisionDTO();
+        when(loanOriginationApi.getApplicationDecisions(eq(applicationId), any())).thenReturn(Mono.just(page));
 
         StepVerifier.create(service.getStatusHistory(applicationId))
-                .assertNext(result -> {
-                    assertThat(result).isNotNull();
-                    assertThat(result.getEntries()).isEmpty();
-                })
+                .assertNext(result -> assertThat(result.getEntries()).isEmpty())
                 .verifyComplete();
     }
 }

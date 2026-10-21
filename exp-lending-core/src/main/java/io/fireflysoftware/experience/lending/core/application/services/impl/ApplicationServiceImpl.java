@@ -17,247 +17,100 @@
 
 package io.fireflysoftware.experience.lending.core.application.services.impl;
 
-import io.fireflysoftware.domain.lending.loan.origination.sdk.api.LoanOriginationApi;
 import io.fireflysoftware.domain.lending.loan.origination.sdk.model.ApplicationPartyDTO;
-import io.fireflysoftware.domain.lending.loan.origination.sdk.model.UpdateApplicationEmploymentDataCommand;
-import io.fireflysoftware.domain.lending.loan.origination.sdk.model.LoanApplicationDTO;
-import io.fireflysoftware.domain.lending.loan.origination.sdk.model.RegisterLoanApplicationCommand;
-import io.fireflysoftware.domain.lending.loan.origination.sdk.model.SubmitApplicationCommand;
 import io.fireflysoftware.experience.lending.core.application.commands.CreateApplicationCommand;
 import io.fireflysoftware.experience.lending.core.application.commands.UpdateApplicationCommand;
 import io.fireflysoftware.experience.lending.core.application.commands.UpdateEmploymentDataCommand;
+import io.fireflysoftware.experience.lending.core.application.ports.LoanApplicationPort;
 import io.fireflysoftware.experience.lending.core.application.queries.ApplicationDetailDTO;
 import io.fireflysoftware.experience.lending.core.application.queries.ApplicationStatusHistoryDTO;
 import io.fireflysoftware.experience.lending.core.application.queries.ApplicationSummaryDTO;
 import io.fireflysoftware.experience.lending.core.application.services.ApplicationService;
-import io.fireflysoftware.experience.lending.core.util.IdempotencyKeys;
+import io.fireflysoftware.experience.lending.core.ports.AccessAction;
+import io.fireflysoftware.experience.lending.core.ports.AccessGuard;
+import io.fireflysoftware.experience.lending.core.ports.IdentityPort;
+import io.fireflysoftware.experience.lending.core.ports.AccessPort;
+import io.fireflysoftware.experience.lending.core.ports.AccessRequest;
+import io.fireflysoftware.experience.lending.core.ports.CreditReportPort;
+import io.fireflysoftware.experience.lending.core.ports.CreditReportQuery;
+import io.fireflysoftware.experience.lending.core.ports.DecisionPort;
+import io.fireflysoftware.experience.lending.core.ports.DecisionRequest;
+import io.fireflysoftware.experience.lending.core.ports.RiskStep;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.fireflyframework.web.error.exceptions.BusinessException;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
 /**
- * Default implementation of {@link ApplicationService}, delegating to the Loan Origination SDK
- * for application lifecycle operations.
+ * Lending application journey. Order: access, local sandbox credit report, decision service
+ * ({@code POST /api/v1/decisions}, step {@code LENDING_APPLICATION}), then loan origination.
+ * A {@code DECLINE} does not call origination.
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ApplicationServiceImpl implements ApplicationService {
 
-    private final LoanOriginationApi loanOriginationApi;
+    static final String JOURNEY_STEP = "LENDING_APPLICATION";
+
+    private final IdentityPort identityPort;
+    private final AccessPort accessPort;
+    private final CreditReportPort creditReportPort;
+    private final DecisionPort decisionPort;
+    private final LoanApplicationPort loanApplicationPort;
 
     @Override
     public Mono<ApplicationDetailDTO> createApplication(CreateApplicationCommand command) {
-        return Mono.fromCallable(() -> validateCreateCommand(command))
-                .flatMap(validated -> {
-                    log.debug("Creating application productId={} simulationId={} requestedAmount={} term={}",
-                            validated.getProductId(),
-                            validated.getSimulationId(),
-                            validated.getRequestedAmount(),
-                            validated.getTerm());
-
-                    var registerCmd = new RegisterLoanApplicationCommand()
-                            .applicationDate(LocalDate.now())
-                            .loanPurpose(validated.getPurpose())
-                            .simulationId(validated.getSimulationId());
-
-                    var submitCmd = new SubmitApplicationCommand()
-                            .application(registerCmd);
-
-                    // Idempotency key derived from stable input fields. Same logical
-                    // request (retry of the same input) → same key → downstream
-                    // dedupes without the client minting a resource ID.
-                    String submitKey = IdempotencyKeys.of(
-                            "exp-lending", "create-application", "submit",
-                            String.valueOf(validated.getProductId()),
-                            String.valueOf(validated.getSimulationId()),
-                            validated.getRequestedAmount().toPlainString(),
-                            String.valueOf(validated.getTerm()),
-                            String.valueOf(validated.getPurpose()));
-
-                    return loanOriginationApi.submitApplication(submitCmd, submitKey)
-                            .flatMap(response -> {
-                                UUID applicationId = extractUuid(
-                                        response instanceof Map<?, ?> m ? m : Map.of(),
-                                        "loanApplicationId");
-                                if (applicationId == null) {
-                                    return Mono.error(new BusinessException(
-                                            HttpStatus.BAD_GATEWAY,
-                                            "UPSTREAM_PROTOCOL_ERROR",
-                                            "domain submitApplication did not return loanApplicationId"));
-                                }
-                                String getKey = IdempotencyKeys.of(
-                                        "exp-lending", "create-application", "get",
-                                        applicationId.toString());
-                                return loanOriginationApi.getApplication(applicationId, getKey);
-                            })
-                            .map(dto -> mapToDetail(dto,
-                                    validated.getRequestedAmount(),
-                                    validated.getTerm(),
-                                    validated.getPurpose(),
-                                    validated.getSimulationId()));
-                });
-    }
-
-    private CreateApplicationCommand validateCreateCommand(CreateApplicationCommand command) {
-        if (command == null) {
-            throw new BusinessException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED",
-                    "createApplication command is required");
-        }
-        if (command.getProductId() == null) {
-            throw new BusinessException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED",
-                    "productId is required");
-        }
-        if (command.getRequestedAmount() == null
-                || command.getRequestedAmount().signum() <= 0) {
-            throw new BusinessException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED",
-                    "requestedAmount must be strictly positive");
-        }
-        if (command.getTerm() == null || command.getTerm() < 1) {
-            throw new BusinessException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED",
-                    "term must be at least 1 month");
-        }
-        return command;
-    }
-
-    @Override
-    public Flux<ApplicationSummaryDTO> listApplications() {
-        // MVP: domain-lending-loan-origination has no list-all endpoint.
-        // Replace when upstream adds a GET collection endpoint.
-        log.debug("Listing applications - returning empty (no upstream list endpoint in MVP)");
-        return Flux.empty();
+        UUID partyId = command.getPartyId() != null ? command.getPartyId() : command.getProductId();
+        return AccessGuard.require(identityPort, accessPort, IdentityPort.SAMPLE_USERNAME,
+                AccessRequest.of(partyId, AccessAction.CREATE, "APPLICATION", null),
+                () -> RiskStep.afterAccess(
+                        creditReportPort,
+                        decisionPort,
+                        new CreditReportQuery(partyId, command.getProductId(), JOURNEY_STEP, Map.of()),
+                        new DecisionRequest(partyId, command.getProductId(), JOURNEY_STEP, Map.of()),
+                        () -> loanApplicationPort.createApplication(command)));
     }
 
     @Override
     public Mono<ApplicationDetailDTO> getApplication(UUID applicationId) {
-        log.debug("Getting application applicationId={}", applicationId);
-        return loanOriginationApi.getApplication(applicationId, UUID.randomUUID().toString())
-                .map(dto -> mapToDetail(dto, null, null, null, null));
+        return read(applicationId, () -> loanApplicationPort.getApplication(applicationId));
     }
 
     @Override
     public Mono<ApplicationDetailDTO> updateApplication(UUID applicationId, UpdateApplicationCommand command) {
-        // MVP: domain-lending-loan-origination has no PATCH endpoint.
-        // Fetches current state and returns it. Replace when upstream adds an update endpoint.
-        log.debug("Updating application applicationId={}", applicationId);
-        return loanOriginationApi.getApplication(applicationId, UUID.randomUUID().toString())
-                .map(dto -> mapToDetail(dto,
-                        command.getRequestedAmount() != null ? command.getRequestedAmount() : null,
-                        command.getTerm(),
-                        command.getPurpose() != null ? command.getPurpose() : dto.getLoanPurpose(),
-                        null));
+        return update(applicationId, () -> loanApplicationPort.updateApplication(applicationId, command));
     }
 
     @Override
     public Mono<Void> submitApplication(UUID applicationId) {
-        // MVP: no dedicated "submit for review" endpoint; delegates to approveApplication.
-        // Replace when upstream adds a submit/transition endpoint.
-        log.debug("Submitting application applicationId={}", applicationId);
-        return loanOriginationApi.approveApplication(applicationId, UUID.randomUUID().toString()).then();
+        return update(applicationId, () -> loanApplicationPort.submitApplication(applicationId));
     }
 
     @Override
     public Mono<Void> withdrawApplication(UUID applicationId) {
-        log.debug("Withdrawing application applicationId={}", applicationId);
-        return loanOriginationApi.withdrawApplication(applicationId, UUID.randomUUID().toString()).then();
+        return update(applicationId, () -> loanApplicationPort.withdrawApplication(applicationId));
     }
 
     @Override
     public Mono<ApplicationStatusHistoryDTO> getStatusHistory(UUID applicationId) {
-        // MVP: domain-lending-loan-origination has no status-history endpoint.
-        // Replace when upstream exposes the status history resource.
-        log.debug("Getting status history for applicationId={}", applicationId);
-        return Mono.just(ApplicationStatusHistoryDTO.builder()
-                .entries(List.of())
-                .build());
+        return read(applicationId, () -> loanApplicationPort.getStatusHistory(applicationId));
     }
 
     @Override
-    public Mono<ApplicationPartyDTO> updateEmploymentData(UUID applicationId,
-                                                          UpdateEmploymentDataCommand command) {
-        log.debug("Updating employment data for applicationId={}", applicationId);
-        // applicationId is the stable natural key for this PATCH-style upsert:
-        // retrying the same logical update must not produce duplicate downstream
-        // employment-data rows.
-        String idempotencyKey = IdempotencyKeys.of(
-                "exp-lending", "update-employment-data", applicationId.toString());
-        return Mono.fromCallable(() -> buildPatch(command))
-                .flatMap(patch -> loanOriginationApi.updateApplicationEmploymentData(
-                        applicationId, patch, idempotencyKey));
+    public Mono<ApplicationPartyDTO> updateEmploymentData(UUID applicationId, UpdateEmploymentDataCommand command) {
+        return update(applicationId, () -> loanApplicationPort.updateEmploymentData(applicationId, command));
     }
 
-    private UpdateApplicationEmploymentDataCommand buildPatch(UpdateEmploymentDataCommand cmd) {
-        return new UpdateApplicationEmploymentDataCommand()
-                .employmentStatus(toUpper(cmd.getEmploymentStatus()))
-                .employmentTypeLabel(toUpper(cmd.getEmploymentType()))
-                .employer(cmd.getEmployer())
-                .position(cmd.getPosition())
-                .employmentStartDate(parseMonthYear(cmd.getEmploymentStartDate()))
-                .annualPaydays(toInteger(cmd.getAnnualPaydays()))
-                .monthlySalary(cmd.getMonthlySalary())
-                .housingType(toUpper(cmd.getHousingType()))
-                .housingCost(cmd.getHousingCost())
-                .housingStartDate(parseMonthYear(cmd.getHousingStartDate()))
-                .existingLoans(toInteger(cmd.getExistingLoans()))
-                .otherDebts(cmd.getOtherDebts());
+    private <T> Mono<T> read(UUID applicationId, java.util.function.Supplier<Mono<T>> call) {
+        return AccessGuard.require(identityPort, accessPort, IdentityPort.SAMPLE_USERNAME,
+                AccessRequest.of(applicationId, AccessAction.READ, "APPLICATION", applicationId), call);
     }
 
-    private static Integer toInteger(Short value) {
-        return value == null ? null : value.intValue();
-    }
-
-    private LocalDate parseMonthYear(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        // Bean Validation already enforces MM/YYYY shape; defend against bypass.
-        String[] parts = value.split("/");
-        if (parts.length != 2) {
-            throw new BusinessException(
-                    HttpStatus.BAD_REQUEST,
-                    "INVALID_DATE_FORMAT",
-                    "date must be in MM/YYYY format, was: " + value);
-        }
-        int month = Integer.parseInt(parts[0]);
-        int year = Integer.parseInt(parts[1]);
-        return LocalDate.of(year, month, 1);
-    }
-
-    private String toUpper(String s) {
-        return s == null ? null : s.toUpperCase(Locale.ROOT);
-    }
-
-    private ApplicationDetailDTO mapToDetail(LoanApplicationDTO dto, java.math.BigDecimal requestedAmount,
-                                              Integer term, String purpose, UUID simulationIdOverride) {
-        UUID simulationId = simulationIdOverride != null
-                ? simulationIdOverride
-                : dto.getSimulationId();
-        return ApplicationDetailDTO.builder()
-                .applicationId(dto.getLoanApplicationId())
-                .simulationId(simulationId)
-                .status(dto.getApplicationStatusId() != null ? dto.getApplicationStatusId().toString() : null)
-                .requestedAmount(requestedAmount)
-                .term(term)
-                .purpose(purpose != null ? purpose : dto.getLoanPurpose())
-                .createdAt(dto.getCreatedAt())
-                .updatedAt(dto.getUpdatedAt())
-                .build();
-    }
-
-    private UUID extractUuid(Map<?, ?> map, String key) {
-        Object value = map.get(key);
-        if (value instanceof String s) return UUID.fromString(s);
-        if (value instanceof UUID u) return u;
-        return null;
+    private <T> Mono<T> update(UUID applicationId, java.util.function.Supplier<Mono<T>> call) {
+        return AccessGuard.require(identityPort, accessPort, IdentityPort.SAMPLE_USERNAME,
+                AccessRequest.of(applicationId, AccessAction.UPDATE, "APPLICATION", applicationId), call);
     }
 }

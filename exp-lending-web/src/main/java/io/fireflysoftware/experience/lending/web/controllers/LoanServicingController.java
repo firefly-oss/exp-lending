@@ -45,13 +45,6 @@ public class LoanServicingController {
 
     private final LoanServicingService loanServicingService;
 
-    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "List Active Loans",
-            description = "Returns all active loan servicing cases accessible to the caller.")
-    public Flux<LoanSummaryDTO> listLoans() {
-        return loanServicingService.listLoans();
-    }
-
     @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get Loan",
             description = "Retrieves full details of an active loan by its identifier.")
@@ -218,13 +211,6 @@ public class LoanServicingController {
             description = "Returns the history of restructuring requests for the loan.")
     public Flux<RestructuringDTO> getRestructurings(@PathVariable UUID id) {
         return loanServicingService.getRestructurings(id);
-    }
-
-    @GetMapping(value = "/{id}/documents", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "List Documents",
-            description = "Returns all documents attached to the loan.")
-    public Flux<LoanDocumentDTO> getDocuments(@PathVariable UUID id) {
-        return loanServicingService.getDocuments(id);
     }
 
     @GetMapping(value = "/{id}/events", produces = MediaType.APPLICATION_JSON_VALUE)

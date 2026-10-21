@@ -109,37 +109,6 @@ class ApplicationControllerTest {
     }
 
     @Test
-    void listApplications_returns200WithEmptyList() {
-        when(applicationService.listApplications()).thenReturn(Flux.empty());
-
-        webTestClient.get()
-                .uri(BASE_PATH)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBodyList(ApplicationSummaryDTO.class)
-                .hasSize(0);
-    }
-
-    @Test
-    void listApplications_returns200WithResults() {
-        var summary = ApplicationSummaryDTO.builder()
-                .applicationId(UUID.randomUUID())
-                .status("DRAFT")
-                .requestedAmount(new BigDecimal("10000"))
-                .createdAt(LocalDateTime.now())
-                .build();
-
-        when(applicationService.listApplications()).thenReturn(Flux.just(summary));
-
-        webTestClient.get()
-                .uri(BASE_PATH)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBodyList(ApplicationSummaryDTO.class)
-                .hasSize(1);
-    }
-
-    @Test
     void getApplication_returns200WithBody() {
         var applicationId = UUID.randomUUID();
         var detail = ApplicationDetailDTO.builder()

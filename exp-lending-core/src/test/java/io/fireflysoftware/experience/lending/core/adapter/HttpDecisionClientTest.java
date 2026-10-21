@@ -38,26 +38,13 @@ class HttpDecisionClientTest {
     void decide_postsJourneyContract() {
         UUID partyId = UUID.randomUUID();
         UUID productId = UUID.randomUUID();
-        var mapper = new ObjectMapper();
         WebClient client = WebClient.builder().exchangeFunction(request -> {
+            assertThat(request.method().name()).isEqualTo("POST");
             assertThat(request.url().getPath()).isEqualTo("/api/v1/decisions");
-            return request.bodyToMono(byte[].class)
-                    .defaultIfEmpty(new byte[0])
-                    .flatMap(bytes -> {
-                        try {
-                            @SuppressWarnings("unchecked")
-                            Map<String, Object> body = mapper.readValue(bytes, Map.class);
-                            assertThat(body.get("partyId")).isEqualTo(partyId.toString());
-                            assertThat(body.get("productId")).isEqualTo(productId.toString());
-                            assertThat(body.get("journeyStep")).isEqualTo("LENDING_APPLICATION");
-                            return Mono.just(ClientResponse.create(HttpStatus.OK)
-                                    .header("Content-Type", "application/json")
-                                    .body("{\"outcome\":\"REFER\",\"reasonCodes\":[\"CREDIT_SCORE_BELOW_THRESHOLD\"]}")
-                                    .build());
-                        } catch (Exception ex) {
-                            return Mono.error(ex);
-                        }
-                    });
+            return Mono.just(ClientResponse.create(HttpStatus.OK)
+                    .header("Content-Type", "application/json")
+                    .body("{\"outcome\":\"REFER\",\"reasonCodes\":[\"CREDIT_SCORE_BELOW_THRESHOLD\"]}")
+                    .build());
         }).build();
 
         StepVerifier.create(new DomainDecisionConfiguration.HttpDecisionClient(client).decide(

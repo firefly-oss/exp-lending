@@ -35,6 +35,7 @@ import io.fireflysoftware.experience.lending.core.ports.CreditReportPort;
 import io.fireflysoftware.experience.lending.core.ports.CreditReportQuery;
 import io.fireflysoftware.experience.lending.core.ports.DecisionPort;
 import io.fireflysoftware.experience.lending.core.ports.DecisionRequest;
+import io.fireflysoftware.experience.lending.core.ports.JourneyStep;
 import io.fireflysoftware.experience.lending.core.ports.RiskStep;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -53,8 +54,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ApplicationServiceImpl implements ApplicationService {
 
-    static final String JOURNEY_STEP = "LENDING_APPLICATION";
-
     private final IdentityPort identityPort;
     private final AccessPort accessPort;
     private final CreditReportPort creditReportPort;
@@ -69,8 +68,8 @@ public class ApplicationServiceImpl implements ApplicationService {
                 () -> RiskStep.afterAccess(
                         creditReportPort,
                         decisionPort,
-                        new CreditReportQuery(partyId, command.getProductId(), JOURNEY_STEP, Map.of()),
-                        new DecisionRequest(partyId, command.getProductId(), JOURNEY_STEP, Map.of()),
+                        new CreditReportQuery(partyId, command.getProductId(), JourneyStep.LENDING_APPLICATION, Map.of()),
+                        new DecisionRequest(partyId, command.getProductId(), JourneyStep.LENDING_APPLICATION, Map.of()),
                         () -> loanApplicationPort.createApplication(command)));
     }
 

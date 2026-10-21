@@ -20,6 +20,7 @@ package io.fireflysoftware.experience.lending.core.adapter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fireflysoftware.experience.lending.core.ports.DecisionOutcome;
 import io.fireflysoftware.experience.lending.core.ports.DecisionRequest;
+import io.fireflysoftware.experience.lending.core.ports.JourneyStep;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.client.ClientResponse;
@@ -48,7 +49,7 @@ class HttpDecisionClientTest {
         }).build();
 
         StepVerifier.create(new DomainDecisionConfiguration.HttpDecisionClient(client).decide(
-                        new DecisionRequest(partyId, productId, "LENDING_APPLICATION", Map.of())))
+                        new DecisionRequest(partyId, productId, JourneyStep.LENDING_APPLICATION, Map.of())))
                 .assertNext(result -> {
                     assertThat(result.outcome()).isEqualTo(DecisionOutcome.REFER);
                     assertThat(result.reasonCodes()).containsExactly("CREDIT_SCORE_BELOW_THRESHOLD");

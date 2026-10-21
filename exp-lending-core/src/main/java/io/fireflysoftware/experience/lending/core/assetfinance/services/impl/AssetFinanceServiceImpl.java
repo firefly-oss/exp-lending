@@ -26,6 +26,7 @@ import io.fireflysoftware.domain.lending.assetfinance.sdk.model.ReturnRecordDTO;
 import io.fireflysoftware.experience.lending.core.assetfinance.commands.ReportServiceEventCommand;
 import io.fireflysoftware.experience.lending.core.assetfinance.commands.ReportUsageCommand;
 import io.fireflysoftware.experience.lending.core.assetfinance.commands.RequestReturnCommand;
+import io.fireflysoftware.experience.lending.core.assetfinance.queries.FinanceType;
 import io.fireflysoftware.experience.lending.core.assetfinance.queries.AgreementDetailDTO;
 import io.fireflysoftware.experience.lending.core.assetfinance.queries.AgreementSummaryDTO;
 import io.fireflysoftware.experience.lending.core.assetfinance.queries.DeliveryDTO;
@@ -241,10 +242,17 @@ public class AssetFinanceServiceImpl implements AssetFinanceService {
     // Mappers — typed SDK DTOs
     // -------------------------------------------------------------------------
 
+    private static FinanceType financeTypeOf(AssetFinanceAgreementDTO.FinanceTypeEnum financeType) {
+        if (financeType == null || financeType.getValue() == null) {
+            return null;
+        }
+        return FinanceType.valueOf(financeType.getValue());
+    }
+
     private AgreementDetailDTO toDetail(AssetFinanceAgreementDTO dto) {
         return AgreementDetailDTO.builder()
                 .agreementId(dto.getAssetFinanceAgreementId())
-                .financeType(dto.getFinanceType() != null ? dto.getFinanceType().getValue() : null)
+                .financeType(financeTypeOf(dto.getFinanceType()))
                 .status(dto.getAgreementStatus() != null ? dto.getAgreementStatus().getValue() : null)
                 .totalValue(dto.getTotalValue())
                 .residualValue(dto.getResidualValue())

@@ -33,7 +33,7 @@ import java.util.UUID;
 public class AgreementSummaryDTO {
 
     private UUID agreementId;
-    private String financeType;
+    private FinanceType financeType;
     private String status;
     private BigDecimal totalValue;
 }

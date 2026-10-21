@@ -89,7 +89,7 @@ class AssetFinanceControllerTest {
         var agreementId = UUID.randomUUID();
         var summary = AgreementSummaryDTO.builder()
                 .agreementId(agreementId)
-                .financeType("LEASING")
+                .financeType(FinanceType.LEASING)
                 .status("ACTIVE")
                 .totalValue(new BigDecimal("25000.00"))
                 .build();
@@ -110,7 +110,7 @@ class AssetFinanceControllerTest {
         var agreementId = UUID.randomUUID();
         var detail = AgreementDetailDTO.builder()
                 .agreementId(agreementId)
-                .financeType("LEASING")
+                .financeType(FinanceType.LEASING)
                 .status("ACTIVE")
                 .totalValue(new BigDecimal("50000.00"))
                 .residualValue(new BigDecimal("10000.00"))
@@ -128,7 +128,7 @@ class AssetFinanceControllerTest {
                 .expectBody(AgreementDetailDTO.class)
                 .value(body -> {
                     assertThat(body.getAgreementId()).isEqualTo(agreementId);
-                    assertThat(body.getFinanceType()).isEqualTo("LEASING");
+                    assertThat(body.getFinanceType()).isEqualTo(FinanceType.LEASING);
                     assertThat(body.getResidualValue()).isEqualByComparingTo("10000.00");
                 });
     }

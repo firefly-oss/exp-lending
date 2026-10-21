@@ -1394,6 +1394,37 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ProductPricingDTO"
+  /api/v1/experience/lending/loans/{id}/calendar:
+    get:
+      tags:
+      - Lending - Active Loans
+      summary: Read amortization calendar
+      description: "Reads the amortization calendar from the loan servicing domain,\
+        \ including each remaining balance."
+      operationId: readAmortizationCalendar
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: X-Idempotency-Key
+        in: header
+        description: "Unique key for idempotent requests. If provided, ensures that\
+          \ identical requests with the same key will only be processed once."
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AmortizationCalendarRow"
   /api/v1/experience/lending/loans/{id}/schedule:
     get:
       tags:
@@ -3316,6 +3347,21 @@ components:
         rateType:
           type: string
         interestRate:
+          type: number
+    AmortizationCalendarRow:
+      type: object
+      properties:
+        installmentNumber:
+          type: integer
+          format: int32
+        dueDate:
+          type: string
+          format: date
+        principal:
+          type: number
+        interest:
+          type: number
+        remainingBalance:
           type: number
     ScheduleEntryDTO:
       type: object

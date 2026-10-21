@@ -215,27 +215,10 @@ class ApplicationDocumentsServiceImplTest {
     }
 
     @Test
-    void downloadDocument_returnsEmptyByteArray() {
-        var sdkResponse = new ApplicationDocumentDTO()
-                .applicationDocumentId(DOCUMENT_ID)
-                .loanApplicationId(APPLICATION_ID);
+    void deleteDocument_deletesTheStoredRecord() {
+        when(loanOriginationApi.deleteApplicationDocument(eq(APPLICATION_ID), eq(DOCUMENT_ID), any()))
+                .thenReturn(Mono.empty());
 
-        when(loanOriginationApi.getApplicationDocuments(eq(APPLICATION_ID), isNull()))
-                .thenReturn(Mono.just(new PaginationResponseApplicationDocumentDTO().content(List.of(sdkResponse))));
-
-        StepVerifier.create(service.downloadDocument(APPLICATION_ID, DOCUMENT_ID))
-                .assertNext(bytes -> assertThat(bytes).isEmpty())
-                .verifyComplete();
-    }
-
-    @Test
-    void deleteDocument_completesSuccessfully() {
-        StepVerifier.create(service.deleteDocument(APPLICATION_ID, DOCUMENT_ID))
-                .verifyComplete();
-    }
-
-    @Test
-    void deleteDocument_completesAsNoOp() {
         StepVerifier.create(service.deleteDocument(APPLICATION_ID, DOCUMENT_ID))
                 .verifyComplete();
     }

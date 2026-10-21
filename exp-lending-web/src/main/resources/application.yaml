@@ -34,6 +34,8 @@ api-configuration:
       base-path: ${ENDPOINT_DOMAIN_LENDING_CREDIT_SCORING:http://localhost:8042}
     lending-asset-finance:
       base-path: ${ENDPOINT_DOMAIN_LENDING_ASSET_FINANCE:http://localhost:8043}
+    lending-delinquency-collections:
+      base-path: ${ENDPOINT_DOMAIN_LENDING_DELINQUENCY_COLLECTIONS:http://localhost:8048}
     lending-personal-loans:
       base-path: ${ENDPOINT_DOMAIN_LENDING_PERSONAL_LOANS:http://localhost:8044}
     product-pricing:

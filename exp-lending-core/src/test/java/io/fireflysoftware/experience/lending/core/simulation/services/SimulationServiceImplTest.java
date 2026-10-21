@@ -20,7 +20,6 @@ package io.fireflysoftware.experience.lending.core.simulation.services;
 import io.fireflysoftware.domain.product.pricing.sdk.api.EligibilityApi;
 import io.fireflysoftware.domain.product.pricing.sdk.api.PricingApi;
 import io.fireflysoftware.domain.product.pricing.sdk.model.RegisterProductPricingCommand;
-import io.fireflysoftware.domain.product.pricing.sdk.model.UpdateProductPricingCommand;
 import io.fireflysoftware.experience.lending.core.simulation.commands.CheckEligibilityCommand;
 import io.fireflysoftware.experience.lending.core.simulation.commands.CreateSimulationCommand;
 import io.fireflysoftware.experience.lending.core.simulation.queries.EligibilityResultDTO;
@@ -99,27 +98,6 @@ class SimulationServiceImplTest {
         StepVerifier.create(service.createSimulation(command))
                 .expectErrorMessage("upstream error")
                 .verify();
-    }
-
-    @Test
-    void getSimulation_delegatesToAmendPricingApi_andMapsResult() {
-        var simulationId = UUID.randomUUID();
-        Map<String, Object> apiResponse = Map.of(
-                "productConfigurationId", simulationId.toString(),
-                "configValue", "7.25",
-                "configKey", "MORTGAGE"
-        );
-
-        when(pricingApi.amendPricing(eq(simulationId), any(UpdateProductPricingCommand.class), any()))
-                .thenReturn(Mono.just(apiResponse));
-
-        StepVerifier.create(service.getSimulation(simulationId))
-                .assertNext(result -> {
-                    assertThat(result.getSimulationId()).isEqualTo(simulationId);
-                    assertThat(result.getAnnualRate()).isEqualByComparingTo("7.25");
-                    assertThat(result.getProductType()).isEqualTo("MORTGAGE");
-                })
-                .verifyComplete();
     }
 
     @Test

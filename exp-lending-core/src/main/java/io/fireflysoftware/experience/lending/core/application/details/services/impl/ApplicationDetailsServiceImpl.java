@@ -70,20 +70,9 @@ public class ApplicationDetailsServiceImpl implements ApplicationDetailsService 
     @Override
     public Mono<TaskDTO> completeTask(UUID applicationId, UUID taskId) {
         log.debug("Completing taskId={} for applicationId={}", taskId, applicationId);
-        // MVP: the domain SDK does not expose a dedicated update-task endpoint.
-        // Returns the existing task with COMPLETED status. Replace when the domain layer
-        // surfaces this endpoint.
         return loanOriginationApi
-                .getApplicationTasks(applicationId, null)
-                .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
-                .filter(t -> taskId.equals(t.getTaskId()))
-                .next()
-                .map(existing -> TaskDTO.builder()
-                        .taskId(existing.getTaskId())
-                        .description(existing.getDescription())
-                        .status("COMPLETED")
-                        .dueDate(existing.getDueDate() != null ? existing.getDueDate().toLocalDate() : null)
-                        .build());
+                .completeApplicationTask(applicationId, taskId, UUID.randomUUID().toString())
+                .map(this::mapToTaskDTO);
     }
 
     @Override

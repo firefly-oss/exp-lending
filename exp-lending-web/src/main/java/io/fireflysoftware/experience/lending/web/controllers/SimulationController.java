@@ -37,8 +37,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
-import java.util.UUID;
-
 /**
  * REST controller exposing the loan simulation and product eligibility evaluation endpoints.
  */
@@ -60,14 +58,6 @@ public class SimulationController {
             @RequestBody CreateSimulationCommand command) {
         return simulationService.createSimulation(command)
                 .map(result -> ResponseEntity.status(HttpStatus.CREATED).body(result));
-    }
-
-    @GetMapping(value = "/simulations/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get Simulation",
-            description = "Retrieves a previously created loan simulation by its identifier.")
-    public Mono<ResponseEntity<SimulationResultDTO>> getSimulation(@PathVariable UUID id) {
-        return simulationService.getSimulation(id)
-                .map(ResponseEntity::ok);
     }
 
     @PostMapping(value = "/simulations/configure",

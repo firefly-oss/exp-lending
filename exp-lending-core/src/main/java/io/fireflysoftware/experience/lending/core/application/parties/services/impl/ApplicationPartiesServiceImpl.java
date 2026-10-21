@@ -24,7 +24,9 @@ import io.fireflysoftware.experience.lending.core.application.parties.commands.U
 import io.fireflysoftware.experience.lending.core.application.parties.services.ApplicationPartiesService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -54,17 +56,17 @@ public class ApplicationPartiesServiceImpl implements ApplicationPartiesService 
     @Override
     public Mono<io.fireflysoftware.experience.lending.core.application.parties.queries.ApplicationPartyDTO> addParty(UUID applicationId, AddApplicationPartyCommand command) {
         log.debug("Adding party partyId={} to applicationId={}", command.getPartyId(), applicationId);
-        // MVP: the domain SDK does not expose a dedicated create-party endpoint.
-        // Party creation is handled as part of the application submission flow.
-        // Returns a stub DTO. Replace when the domain layer surfaces this endpoint.
-        return Mono.just(io.fireflysoftware.experience.lending.core.application.parties.queries.ApplicationPartyDTO.builder()
+        var body = new ApplicationPartyDTO()
+                .loanApplicationId(applicationId)
                 .partyId(command.getPartyId())
-                .applicationId(applicationId)
-                .role(null)
-                .fullName(null)
-                .identificationNumber(null)
-                .addedAt(null)
-                .build());
+                .employmentTypeId(command.getEmploymentTypeId());
+        UUID roleCodeId = roleCodeId(command.getRole());
+        if (roleCodeId != null) {
+            body.roleCodeId(roleCodeId);
+        }
+        return loanOriginationApi
+                .addApplicationParty(applicationId, body, UUID.randomUUID().toString())
+                .map(this::mapToDTO);
     }
 
     @Override
@@ -81,17 +83,47 @@ public class ApplicationPartiesServiceImpl implements ApplicationPartiesService 
     @Override
     public Mono<io.fireflysoftware.experience.lending.core.application.parties.queries.ApplicationPartyDTO> updateParty(UUID applicationId, UUID partyId, UpdateApplicationPartyCommand command) {
         log.debug("Updating partyId={} for applicationId={}", partyId, applicationId);
-        // MVP: the domain SDK does not expose a dedicated update-party endpoint.
-        // Returns the existing party unchanged. Replace when the domain layer surfaces this endpoint.
-        return getParty(applicationId, partyId);
+        UUID roleCodeId = roleCodeId(command.getRole());
+        if (command.getRole() != null && roleCodeId == null) {
+            return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Party role must be a role code id"));
+        }
+        return storedParty(applicationId, partyId)
+                .flatMap(existing -> {
+                    if (roleCodeId != null) {
+                        existing.setRoleCodeId(roleCodeId);
+                    }
+                    return loanOriginationApi.updateApplicationParty(
+                            applicationId, existing.getApplicationPartyId(), existing, UUID.randomUUID().toString());
+                })
+                .map(this::mapToDTO);
     }
 
     @Override
     public Mono<Void> removeParty(UUID applicationId, UUID partyId) {
         log.debug("Removing partyId={} from applicationId={}", partyId, applicationId);
-        // MVP: the domain SDK does not expose a dedicated delete-party endpoint.
-        // Operation completes as a no-op until the domain layer surfaces this endpoint.
-        return Mono.empty();
+        return storedParty(applicationId, partyId)
+                .flatMap(existing -> loanOriginationApi.removeApplicationParty(
+                        applicationId, existing.getApplicationPartyId(), UUID.randomUUID().toString()));
+    }
+
+    private Mono<ApplicationPartyDTO> storedParty(UUID applicationId, UUID partyId) {
+        return loanOriginationApi
+                .getApplicationParties(applicationId, null)
+                .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
+                .filter(party -> partyId.equals(party.getPartyId()) || partyId.equals(party.getApplicationPartyId()))
+                .next()
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Application party not found")));
+    }
+
+    private static UUID roleCodeId(String role) {
+        if (role == null || role.isBlank()) {
+            return null;
+        }
+        try {
+            return UUID.fromString(role);
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
     }
 
     private io.fireflysoftware.experience.lending.core.application.parties.queries.ApplicationPartyDTO mapToDTO(ApplicationPartyDTO src) {

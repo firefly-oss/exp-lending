@@ -34,7 +34,7 @@ import java.util.UUID;
 
 /**
  * REST controller exposing document management endpoints for a loan application
- * (list, upload, download, delete).
+ * (list, upload, delete).
  */
 @RestController
 @RequestMapping("/api/v1/experience/lending/applications/{id}/documents")
@@ -59,16 +59,6 @@ public class ApplicationDocumentsController {
             @RequestBody UploadDocumentCommand command) {
         return applicationDocumentsService.uploadDocument(id, command)
                 .map(result -> ResponseEntity.status(HttpStatus.CREATED).body(result));
-    }
-
-    @GetMapping(value = "/{docId}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    @Operation(summary = "Download Document",
-            description = "Downloads the binary content of an application document.")
-    public Mono<ResponseEntity<byte[]>> downloadDocument(
-            @PathVariable UUID id,
-            @PathVariable UUID docId) {
-        return applicationDocumentsService.downloadDocument(id, docId)
-                .map(ResponseEntity::ok);
     }
 
     @DeleteMapping("/{docId}")

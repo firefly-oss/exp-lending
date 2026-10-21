@@ -116,20 +116,23 @@ public class DecisionServiceImpl implements DecisionService {
     @Override
     public Mono<Void> acceptOffer(UUID applicationId, UUID offerId) {
         log.debug("Accepting offer offerId={} for applicationId={}", offerId, applicationId);
-        // MVP: the domain SDK does not expose a dedicated update-offer endpoint.
-        // Offer acceptance is handled as part of the application approval flow via approveApplication.
+        var patch = new ProposedOfferDTO()
+                .offerStatus("ACCEPTED")
+                .acceptedAt(LocalDateTime.now());
         return loanOriginationApi
-                .approveApplication(applicationId, UUID.randomUUID().toString())
+                .updateApplicationOffer(applicationId, offerId, patch, UUID.randomUUID().toString())
                 .then();
     }
 
     @Override
     public Mono<Void> rejectOffer(UUID applicationId, UUID offerId, RejectOfferCommand command) {
         log.debug("Rejecting offer offerId={} for applicationId={}", offerId, applicationId);
-        // MVP: the domain SDK does not expose a dedicated update-offer endpoint.
-        // Offer rejection is handled as part of the application rejection flow via rejectApplication.
+        var patch = new ProposedOfferDTO().offerStatus("REJECTED");
+        if (command != null && command.getReason() != null) {
+            patch.rejectionReason(command.getReason());
+        }
         return loanOriginationApi
-                .rejectApplication(applicationId, UUID.randomUUID().toString())
+                .updateApplicationOffer(applicationId, offerId, patch, UUID.randomUUID().toString())
                 .then();
     }
 

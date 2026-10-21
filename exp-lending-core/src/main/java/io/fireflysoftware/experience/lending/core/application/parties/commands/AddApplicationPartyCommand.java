@@ -33,4 +33,7 @@ public class AddApplicationPartyCommand {
 
     private UUID partyId;
     private String role;
+
+    /** Employment type stored on the origination party row. Required by the origination core. */
+    private UUID employmentTypeId;
 }

@@ -57,25 +57,38 @@ public class DisbursementAccountServiceImpl implements DisbursementAccountServic
                                                                       ConfigureDisbursementAccountCommand command) {
         log.debug("Configuring disbursement account for applicationId={} accountType={}",
                 applicationId, command.getAccountType());
-        // MVP: the domain SDK does not expose an update-application endpoint.
-        // Returns the current disbursement account unchanged. Replace when the domain layer
-        // surfaces this endpoint.
-        return getDisbursementAccount(applicationId);
+        var disbursement = new LoanApplicationDTO();
+        if ("INTERNAL".equals(command.getAccountType())) {
+            disbursement.setDisbursementMethodType(LoanApplicationDTO.DisbursementMethodTypeEnum.INTERNAL_ACCOUNT);
+            disbursement.setDisbursementInternalAccountId(command.getAccountId());
+            disbursement.setDisbursementExternalBankAccountId(null);
+        } else if ("EXTERNAL".equals(command.getAccountType())) {
+            disbursement.setDisbursementMethodType(LoanApplicationDTO.DisbursementMethodTypeEnum.EXTERNAL_ACCOUNT);
+            disbursement.setDisbursementExternalBankAccountId(command.getAccountId());
+            disbursement.setDisbursementInternalAccountId(null);
+        } else {
+            return Mono.error(new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST, "Account type must be INTERNAL or EXTERNAL"));
+        }
+        return loanOriginationApi
+                .configureDisbursementAccount(applicationId, disbursement, UUID.randomUUID().toString())
+                .flatMap(app -> buildDisbursementAccountDTO(applicationId, app));
     }
 
     @Override
     public Mono<ExternalAccountDTO> registerExternalAccount(UUID applicationId,
                                                              RegisterExternalAccountCommand command) {
         log.debug("Registering external account for applicationId={}", applicationId);
-        // MVP: the domain SDK does not expose a create-external-bank-account endpoint.
-        // Returns a stub DTO. Replace when the domain layer surfaces this endpoint.
-        return Mono.just(ExternalAccountDTO.builder()
-                .accountId(UUID.randomUUID())
-                .iban(command.getIban())
+        var body = new ApplicationExternalBankAccountDTO()
+                .loanApplicationId(applicationId)
+                .accountUsageType(ApplicationExternalBankAccountDTO.AccountUsageTypeEnum.DISBURSEMENT)
+                .accountHolderName(command.getHolderName())
                 .bankName(command.getBankName())
-                .holderName(command.getHolderName())
-                .registeredAt(null)
-                .build());
+                .iban(command.getIban())
+                .accountNumber(command.getIban());
+        return loanOriginationApi
+                .registerExternalBankAccount(applicationId, body, UUID.randomUUID().toString())
+                .map(this::mapToExternalAccountDTO);
     }
 
     @Override
@@ -89,9 +102,7 @@ public class DisbursementAccountServiceImpl implements DisbursementAccountServic
     @Override
     public Mono<Void> deleteExternalAccount(UUID applicationId, UUID accountId) {
         log.debug("Deleting external account accountId={} for applicationId={}", accountId, applicationId);
-        // MVP: the domain SDK does not expose a delete-external-bank-account endpoint.
-        // Operation completes as a no-op until the domain layer surfaces this endpoint.
-        return Mono.empty();
+        return loanOriginationApi.deleteExternalBankAccount(applicationId, accountId, UUID.randomUUID().toString());
     }
 
     private Mono<DisbursementAccountDTO> buildDisbursementAccountDTO(UUID applicationId,

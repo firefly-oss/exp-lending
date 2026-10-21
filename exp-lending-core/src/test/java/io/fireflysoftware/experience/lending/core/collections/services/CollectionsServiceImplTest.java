@@ -17,6 +17,10 @@
 
 package io.fireflysoftware.experience.lending.core.collections.services;
 
+import io.fireflysoftware.domain.lending.collections.sdk.api.CollectionCasesApi;
+import io.fireflysoftware.domain.lending.collections.sdk.model.CollectionCaseDTO;
+import io.fireflysoftware.domain.lending.collections.sdk.model.CollectionPromiseDTO;
+import io.fireflysoftware.domain.lending.collections.sdk.model.PaginationResponseCollectionCaseDTO;
 import io.fireflysoftware.domain.lending.loan.servicing.sdk.api.LoanServicingApi;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fireflysoftware.experience.lending.core.collections.commands.RegisterPaymentPromiseCommand;
@@ -31,6 +35,8 @@ import reactor.test.StepVerifier;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -43,6 +49,9 @@ import static org.mockito.Mockito.when;
 class CollectionsServiceImplTest {
 
     @Mock
+    private CollectionCasesApi collectionCasesApi;
+
+    @Mock
     private LoanServicingApi loanServicingApi;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -51,14 +60,32 @@ class CollectionsServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new CollectionsServiceImpl(loanServicingApi, objectMapper);
+        service = new CollectionsServiceImpl(collectionCasesApi, loanServicingApi, objectMapper);
     }
 
     // --- listCollectionCases ---
 
     @Test
-    void listCollectionCases_returnsEmpty() {
+    void listCollectionCases_mapsStoredCases() {
+        var caseId = UUID.randomUUID();
+        var loanId = UUID.randomUUID();
+        var stored = new CollectionCaseDTO()
+                .collectionCaseId(caseId)
+                .loanServicingCaseId(loanId)
+                .collectionStatus(CollectionCaseDTO.CollectionStatusEnum.OPEN)
+                .totalDue(new BigDecimal("3200.00"))
+                .daysPastDue(12);
+        when(collectionCasesApi.callList(any()))
+                .thenReturn(Mono.just(new PaginationResponseCollectionCaseDTO().content(List.of(stored))));
+
         StepVerifier.create(service.listCollectionCases())
+                .assertNext(summary -> {
+                    assertThat(summary.getCaseId()).isEqualTo(caseId);
+                    assertThat(summary.getLoanId()).isEqualTo(loanId);
+                    assertThat(summary.getStatus()).isEqualTo("OPEN");
+                    assertThat(summary.getOverdueAmount()).isEqualByComparingTo("3200.00");
+                    assertThat(summary.getDaysPastDue()).isEqualTo(12);
+                })
                 .verifyComplete();
     }
 
@@ -89,15 +116,22 @@ class CollectionsServiceImplTest {
     // --- registerPaymentPromise ---
 
     @Test
-    void registerPaymentPromise_returnsStubPromise() {
+    void registerPaymentPromise_persistsThroughCollections() {
         var caseId = UUID.randomUUID();
+        var promiseId = UUID.randomUUID();
         var command = new RegisterPaymentPromiseCommand();
         command.setPromisedAmount(new BigDecimal("1500.00"));
         command.setPromiseDate(LocalDate.of(2026, 3, 31));
+        var saved = new CollectionPromiseDTO()
+                .collectionPromiseId(promiseId)
+                .promisedAmount(new BigDecimal("1500.00"))
+                .promisedDate(LocalDateTime.of(2026, 3, 31, 0, 0));
+        when(collectionCasesApi.registerPaymentPromise(eq(caseId), any(), any()))
+                .thenReturn(Mono.just(saved));
 
         StepVerifier.create(service.registerPaymentPromise(caseId, command))
                 .assertNext(promise -> {
-                    assertThat(promise.getPromiseId()).isNotNull();
+                    assertThat(promise.getPromiseId()).isEqualTo(promiseId);
                     assertThat(promise.getPromisedAmount()).isEqualByComparingTo(new BigDecimal("1500.00"));
                     assertThat(promise.getPromiseDate()).isEqualTo(LocalDate.of(2026, 3, 31));
                     assertThat(promise.getStatus()).isEqualTo("PENDING");

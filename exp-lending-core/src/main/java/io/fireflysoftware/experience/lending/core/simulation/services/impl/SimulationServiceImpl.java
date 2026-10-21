@@ -21,7 +21,6 @@ import io.fireflysoftware.domain.product.pricing.sdk.api.EligibilityApi;
 import io.fireflysoftware.domain.product.pricing.sdk.api.PricingApi;
 import io.fireflysoftware.domain.product.pricing.sdk.model.EvaluateEligibilityCommand;
 import io.fireflysoftware.domain.product.pricing.sdk.model.RegisterProductPricingCommand;
-import io.fireflysoftware.domain.product.pricing.sdk.model.UpdateProductPricingCommand;
 import io.fireflysoftware.experience.lending.core.simulation.commands.CheckEligibilityCommand;
 import io.fireflysoftware.experience.lending.core.simulation.commands.CreateSimulationCommand;
 import io.fireflysoftware.experience.lending.core.simulation.queries.EligibilityResultDTO;
@@ -67,16 +66,6 @@ public class SimulationServiceImpl implements SimulationService {
 
         return pricingApi.registerPricing(pricingCmd, UUID.randomUUID().toString())
                 .map(response -> mapToSimulationResult(response, command.getTerm(), command.getProductType()));
-    }
-
-    @Override
-    public Mono<SimulationResultDTO> getSimulation(UUID simulationId) {
-        log.debug("Getting simulation simulationId={}", simulationId);
-
-        // MVP: domain-product-pricing has no GET by ID; amendPricing with no changes
-        // retrieves the current pricing record. Replace when upstream adds a GET endpoint.
-        return pricingApi.amendPricing(simulationId, new UpdateProductPricingCommand(), UUID.randomUUID().toString())
-                .map(response -> mapToSimulationResult(response, null, null));
     }
 
     @Override

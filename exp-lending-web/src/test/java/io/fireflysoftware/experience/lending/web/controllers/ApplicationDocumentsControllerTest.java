@@ -153,19 +153,6 @@ class ApplicationDocumentsControllerTest {
     }
 
     @Test
-    void downloadDocument_returns200WithBytes() {
-        when(applicationDocumentsService.downloadDocument(eq(APPLICATION_ID), eq(DOCUMENT_ID)))
-                .thenReturn(Mono.just(new byte[]{1, 2, 3}));
-
-        webTestClient.get()
-                .uri(BASE_PATH + "/{docId}", APPLICATION_ID, DOCUMENT_ID)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody(byte[].class)
-                .value(body -> assertThat(body).hasSize(3));
-    }
-
-    @Test
     void deleteDocument_returns204() {
         when(applicationDocumentsService.deleteDocument(eq(APPLICATION_ID), eq(DOCUMENT_ID)))
                 .thenReturn(Mono.empty());

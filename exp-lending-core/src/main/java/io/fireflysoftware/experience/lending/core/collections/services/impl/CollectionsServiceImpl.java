@@ -17,6 +17,8 @@
 
 package io.fireflysoftware.experience.lending.core.collections.services.impl;
 
+import io.fireflysoftware.domain.lending.collections.sdk.api.CollectionCasesApi;
+import io.fireflysoftware.domain.lending.collections.sdk.model.CollectionPromiseDTO;
 import io.fireflysoftware.domain.lending.loan.servicing.sdk.api.LoanServicingApi;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fireflysoftware.experience.lending.core.collections.commands.RegisterPaymentPromiseCommand;
@@ -37,23 +39,30 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Default implementation of {@link CollectionsService}, delegating to the domain Loan Servicing
- * SDK's {@code LoanServicingApi} for collection case retrieval and payment promise registration.
+ * Collection cases and payment promises are stored by the delinquency collections domain.
+ * Case detail still reads the linked servicing record.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class CollectionsServiceImpl implements CollectionsService {
 
+    private final CollectionCasesApi collectionCasesApi;
     private final LoanServicingApi loanServicingApi;
     private final ObjectMapper objectMapper;
 
     @Override
     public Flux<CollectionCaseSummaryDTO> listCollectionCases() {
-        // MVP: the domain SDK does not expose a list-all-servicing-cases endpoint.
-        // Returns an empty list. Replace when the domain layer surfaces this endpoint.
         log.debug("Listing collection cases");
-        return Flux.empty();
+        return collectionCasesApi.callList(UUID.randomUUID().toString())
+                .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
+                .map(item -> CollectionCaseSummaryDTO.builder()
+                        .caseId(item.getCollectionCaseId())
+                        .loanId(item.getLoanServicingCaseId())
+                        .status(item.getCollectionStatus() != null ? item.getCollectionStatus().getValue() : null)
+                        .overdueAmount(item.getTotalDue())
+                        .daysPastDue(item.getDaysPastDue())
+                        .build());
     }
 
     @Override
@@ -81,14 +90,24 @@ public class CollectionsServiceImpl implements CollectionsService {
 
     @Override
     public Mono<PaymentPromiseDTO> registerPaymentPromise(UUID caseId, RegisterPaymentPromiseCommand command) {
-        // MVP: no dedicated payment promise resource in domain-lending-loan-servicing-sdk.
-        // Returns a stub promise record. Replace when upstream exposes a promise sub-resource.
         log.debug("Registering payment promise caseId={}", caseId);
-        return Mono.just(PaymentPromiseDTO.builder()
-                .promiseId(UUID.randomUUID())
+        var body = new CollectionPromiseDTO()
+                .collectionCaseId(caseId)
                 .promisedAmount(command.getPromisedAmount())
-                .promiseDate(command.getPromiseDate())
-                .status("PENDING")
-                .build());
+                .promisedDate(command.getPromiseDate() != null ? command.getPromiseDate().atStartOfDay() : null);
+        return collectionCasesApi.registerPaymentPromise(caseId, body, UUID.randomUUID().toString())
+                .map(saved -> PaymentPromiseDTO.builder()
+                        .promiseId(saved.getCollectionPromiseId())
+                        .promisedAmount(saved.getPromisedAmount())
+                        .promiseDate(saved.getPromisedDate() != null ? saved.getPromisedDate().toLocalDate() : null)
+                        .status(promiseStatus(saved.getIsKept()))
+                        .build());
+    }
+
+    private static String promiseStatus(Boolean kept) {
+        if (kept == null) {
+            return "PENDING";
+        }
+        return Boolean.TRUE.equals(kept) ? "KEPT" : "BROKEN";
     }
 }

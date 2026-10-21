@@ -81,6 +81,10 @@
         </dependency>
         <dependency>
             <groupId>io.fireflysoftware</groupId>
+            <artifactId>domain-lending-delinquency-collections-sdk</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.fireflysoftware</groupId>
             <artifactId>domain-lending-personal-loans-sdk</artifactId>
         </dependency>
         <dependency>

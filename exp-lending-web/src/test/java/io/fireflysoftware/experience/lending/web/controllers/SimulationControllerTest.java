@@ -108,41 +108,6 @@ class SimulationControllerTest {
     }
 
     @Test
-    void getSimulation_returns200WithBody() {
-        var simulationId = UUID.randomUUID();
-        var result = SimulationResultDTO.builder()
-                .simulationId(simulationId)
-                .annualRate(new BigDecimal("6.0"))
-                .term(12)
-                .productType("CAR_LOAN")
-                .build();
-
-        when(simulationService.getSimulation(eq(simulationId))).thenReturn(Mono.just(result));
-
-        webTestClient.get()
-                .uri("/api/v1/experience/lending/simulations/{id}", simulationId)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody(SimulationResultDTO.class)
-                .value(body -> {
-                    assertThat(body.getSimulationId()).isEqualTo(simulationId);
-                    assertThat(body.getTerm()).isEqualTo(12);
-                });
-    }
-
-    @Test
-    void getSimulation_returns500WhenServiceFails() {
-        var simulationId = UUID.randomUUID();
-        when(simulationService.getSimulation(eq(simulationId)))
-                .thenReturn(Mono.error(new RuntimeException("not found")));
-
-        webTestClient.get()
-                .uri("/api/v1/experience/lending/simulations/{id}", simulationId)
-                .exchange()
-                .expectStatus().is5xxServerError();
-    }
-
-    @Test
     void checkEligibility_returns200WithBody() {
         var result = EligibilityResultDTO.builder()
                 .evaluationId(UUID.randomUUID())

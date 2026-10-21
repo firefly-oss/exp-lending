@@ -23,16 +23,12 @@ import io.fireflysoftware.experience.lending.core.simulation.queries.Eligibility
 import io.fireflysoftware.experience.lending.core.simulation.queries.SimulationResultDTO;
 import reactor.core.publisher.Mono;
 
-import java.util.UUID;
-
 /**
  * Service for loan simulation and product eligibility evaluation operations.
  */
 public interface SimulationService {
 
     Mono<SimulationResultDTO> createSimulation(CreateSimulationCommand command);
-
-    Mono<SimulationResultDTO> getSimulation(UUID simulationId);
 
     Mono<EligibilityResultDTO> checkEligibility(CheckEligibilityCommand command);
 }

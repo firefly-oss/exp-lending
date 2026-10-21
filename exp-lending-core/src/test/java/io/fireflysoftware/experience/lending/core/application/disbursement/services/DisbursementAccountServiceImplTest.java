@@ -130,15 +130,22 @@ class DisbursementAccountServiceImplTest {
     // --- registerExternalAccount ---
 
     @Test
-    void registerExternalAccount_returnsStubDTO() {
+    void registerExternalAccount_persistsTheAccount() {
         var command = new RegisterExternalAccountCommand();
         command.setIban("ES1234");
         command.setBankName("My Bank");
         command.setHolderName("John Doe");
+        var saved = new ApplicationExternalBankAccountDTO()
+                .externalBankAccountId(EXTERNAL_ACCOUNT_ID)
+                .iban("ES1234")
+                .bankName("My Bank")
+                .accountHolderName("John Doe");
+        when(loanOriginationApi.registerExternalBankAccount(eq(APPLICATION_ID), any(), any()))
+                .thenReturn(Mono.just(saved));
 
         StepVerifier.create(service.registerExternalAccount(APPLICATION_ID, command))
                 .assertNext(dto -> {
-                    assertThat(dto.getAccountId()).isNotNull();
+                    assertThat(dto.getAccountId()).isEqualTo(EXTERNAL_ACCOUNT_ID);
                     assertThat(dto.getIban()).isEqualTo("ES1234");
                     assertThat(dto.getBankName()).isEqualTo("My Bank");
                     assertThat(dto.getHolderName()).isEqualTo("John Doe");
@@ -186,7 +193,10 @@ class DisbursementAccountServiceImplTest {
     // --- deleteExternalAccount ---
 
     @Test
-    void deleteExternalAccount_completesSuccessfully() {
+    void deleteExternalAccount_deletesTheStoredAccount() {
+        when(loanOriginationApi.deleteExternalBankAccount(eq(APPLICATION_ID), eq(EXTERNAL_ACCOUNT_ID), any()))
+                .thenReturn(Mono.empty());
+
         StepVerifier.create(service.deleteExternalAccount(APPLICATION_ID, EXTERNAL_ACCOUNT_ID))
                 .verifyComplete();
     }

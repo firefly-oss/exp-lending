@@ -141,24 +141,9 @@ public class ApplicationDocumentsServiceImpl implements ApplicationDocumentsServ
     }
 
     @Override
-    public Mono<byte[]> downloadDocument(UUID applicationId, UUID documentId) {
-        // MVP: the domain SDK returns document metadata only; binary content is managed by an ECM layer.
-        // Returns empty bytes until ECM integration is wired.
-        log.debug("Downloading document documentId={} for applicationId={}", documentId, applicationId);
-        return loanOriginationApi
-                .getApplicationDocuments(applicationId, null)
-                .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
-                .filter(d -> documentId.equals(d.getApplicationDocumentId()))
-                .next()
-                .map(d -> new byte[0]);
-    }
-
-    @Override
     public Mono<Void> deleteDocument(UUID applicationId, UUID documentId) {
-        // MVP: the domain SDK does not expose a delete-document endpoint.
-        // Operation completes as a no-op until the domain layer surfaces this endpoint.
         log.debug("Deleting document documentId={} for applicationId={}", documentId, applicationId);
-        return Mono.empty();
+        return loanOriginationApi.deleteApplicationDocument(applicationId, documentId, UUID.randomUUID().toString());
     }
 
     private io.fireflysoftware.experience.lending.core.application.documents.queries.ApplicationDocumentDTO mapToDTO(ApplicationDocumentDTO src) {

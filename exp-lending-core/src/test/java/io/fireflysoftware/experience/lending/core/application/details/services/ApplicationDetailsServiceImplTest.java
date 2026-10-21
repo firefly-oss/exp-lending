@@ -160,16 +160,14 @@ class ApplicationDetailsServiceImplTest {
 
     @Test
     void completeTask_returnsTaskWithCompletedStatus() {
-        var existing = new ApplicationTaskDTO()
+        var stored = new ApplicationTaskDTO()
                 .taskId(TASK_ID)
                 .loanApplicationId(APPLICATION_ID)
-                .taskStatus("PENDING")
+                .taskStatus("COMPLETED")
                 .description("Collect income documents");
 
-        var page = new PaginationResponseApplicationTaskDTO().content(List.of(existing));
-
-        when(loanOriginationApi.getApplicationTasks(eq(APPLICATION_ID), isNull()))
-                .thenReturn(Mono.just(page));
+        when(loanOriginationApi.completeApplicationTask(eq(APPLICATION_ID), eq(TASK_ID), any()))
+                .thenReturn(Mono.just(stored));
 
         StepVerifier.create(service.completeTask(APPLICATION_ID, TASK_ID))
                 .assertNext(dto -> {
@@ -181,7 +179,7 @@ class ApplicationDetailsServiceImplTest {
 
     @Test
     void completeTask_propagatesUpstreamError() {
-        when(loanOriginationApi.getApplicationTasks(eq(APPLICATION_ID), isNull()))
+        when(loanOriginationApi.completeApplicationTask(eq(APPLICATION_ID), eq(TASK_ID), any()))
                 .thenReturn(Mono.error(new RuntimeException("not found")));
 
         StepVerifier.create(service.completeTask(APPLICATION_ID, TASK_ID))

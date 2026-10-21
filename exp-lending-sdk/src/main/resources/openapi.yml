@@ -1330,34 +1330,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApplicationPartyDTO"
-  /api/v1/experience/lending/simulations/{id}:
-    get:
-      tags:
-      - Lending - Simulation & Eligibility
-      summary: Get Simulation
-      description: Retrieves a previously created loan simulation by its identifier.
-      operationId: getSimulation
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: X-Idempotency-Key
-        in: header
-        description: "Unique key for idempotent requests. If provided, ensures that\
-          \ identical requests with the same key will only be processed once."
-        required: false
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SimulationResultDTO"
   /api/v1/experience/lending/products/{productId}/pricing:
     get:
       tags:
@@ -2574,40 +2546,6 @@ paths:
                 items:
                   $ref: "#/components/schemas/FeeDTO"
   /api/v1/experience/lending/applications/{id}/documents/{docId}:
-    get:
-      tags:
-      - Lending - Application Documents
-      summary: Download Document
-      description: Downloads the binary content of an application document.
-      operationId: downloadDocument
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: docId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: X-Idempotency-Key
-        in: header
-        description: "Unique key for idempotent requests. If provided, ensures that\
-          \ identical requests with the same key will only be processed once."
-        required: false
-        schema:
-          type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            application/octet-stream:
-              schema:
-                type: string
-                format: byte
     delete:
       tags:
       - Lending - Application Documents

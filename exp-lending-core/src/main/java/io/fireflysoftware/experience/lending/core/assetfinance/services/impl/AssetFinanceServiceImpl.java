@@ -69,10 +69,15 @@ public class AssetFinanceServiceImpl implements AssetFinanceService {
 
     @Override
     public Flux<AgreementSummaryDTO> listAgreements() {
-        // MVP: domain-lending-asset-finance-sdk does not expose a findAll agreements
-        // endpoint. Replace when upstream adds a paginated agreements resource.
-        log.debug("Listing asset finance agreements (MVP stub)");
-        return Flux.empty();
+        log.debug("Listing asset finance agreements");
+        return assetFinanceApi.listAgreements(UUID.randomUUID().toString())
+                .flatMapIterable(page -> page.getContent() != null ? page.getContent() : List.of())
+                .map(dto -> AgreementSummaryDTO.builder()
+                        .agreementId(dto.getAssetFinanceAgreementId())
+                        .financeType(financeTypeOf(dto.getFinanceType()))
+                        .status(dto.getAgreementStatus() != null ? dto.getAgreementStatus().getValue() : null)
+                        .totalValue(dto.getTotalValue())
+                        .build());
     }
 
     @Override

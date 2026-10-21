@@ -18,6 +18,7 @@
 package io.fireflysoftware.experience.lending.infra;
 
 import io.fireflysoftware.domain.common.contracts.sdk.api.ContractsApi;
+import io.fireflysoftware.domain.common.contracts.sdk.api.KitDocumentsApi;
 import io.fireflysoftware.domain.common.contracts.sdk.api.ContractDocumentsApi;
 import io.fireflysoftware.domain.common.contracts.sdk.api.ContractPartiesApi;
 import io.fireflysoftware.domain.common.contracts.sdk.api.ContractSignaturesApi;
@@ -73,5 +74,10 @@ public class ContractsClientFactory {
     @Bean
     public ContractTermsApi contractTermsApi() {
         return new ContractTermsApi(apiClient);
+    }
+
+    @Bean
+    public KitDocumentsApi kitDocumentsApi() {
+        return new KitDocumentsApi(apiClient);
     }
 }

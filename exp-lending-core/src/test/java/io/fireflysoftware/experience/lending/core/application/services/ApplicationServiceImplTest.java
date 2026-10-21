@@ -17,6 +17,7 @@
 
 package io.fireflysoftware.experience.lending.core.application.services;
 
+import io.fireflysoftware.domain.common.contracts.sdk.api.KitDocumentsApi;
 import io.fireflysoftware.domain.lending.loan.origination.sdk.api.LoanOriginationApi;
 import io.fireflysoftware.domain.lending.loan.origination.sdk.model.LoanApplicationDTO;
 import io.fireflysoftware.domain.lending.loan.origination.sdk.model.SubmitApplicationCommand;
@@ -41,6 +42,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -49,12 +51,15 @@ class ApplicationServiceImplTest {
 
     @Mock
     private LoanOriginationApi loanOriginationApi;
+    @Mock
+    private KitDocumentsApi kitDocumentsApi;
 
     private DomainLoanApplicationAdapter service;
 
     @BeforeEach
     void setUp() {
-        service = new DomainLoanApplicationAdapter(loanOriginationApi);
+        lenient().when(kitDocumentsApi.issue(any(), any(), any(), any())).thenReturn(Mono.just(UUID.randomUUID()));
+        service = new DomainLoanApplicationAdapter(loanOriginationApi, kitDocumentsApi);
     }
 
     @Test
@@ -91,6 +96,7 @@ class ApplicationServiceImplTest {
                     assertThat(result.getPurpose()).isEqualTo("PERSONAL");
                 })
                 .verifyComplete();
+        verify(kitDocumentsApi).issue(eq("contract"), any(), eq(applicationId), any());
     }
 
     @Test

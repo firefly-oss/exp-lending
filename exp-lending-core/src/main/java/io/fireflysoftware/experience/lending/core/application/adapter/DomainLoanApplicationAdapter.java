@@ -17,6 +17,7 @@
 
 package io.fireflysoftware.experience.lending.core.application.adapter;
 
+import io.fireflysoftware.domain.common.contracts.sdk.api.KitDocumentsApi;
 import io.fireflysoftware.domain.lending.loan.origination.sdk.api.LoanOriginationApi;
 import io.fireflysoftware.domain.lending.loan.origination.sdk.model.ApplicationPartyDTO;
 import io.fireflysoftware.domain.lending.loan.origination.sdk.model.UpdateApplicationEmploymentDataCommand;
@@ -57,6 +58,7 @@ import java.util.UUID;
 public class DomainLoanApplicationAdapter implements LoanApplicationPort {
 
     private final LoanOriginationApi loanOriginationApi;
+    private final KitDocumentsApi kitDocumentsApi;
 
     @Override
     public Mono<ApplicationDetailDTO> createApplication(CreateApplicationCommand command) {
@@ -101,7 +103,9 @@ public class DomainLoanApplicationAdapter implements LoanApplicationPort {
                                 String getKey = IdempotencyKeys.of(
                                         "exp-lending", "create-application", "get",
                                         applicationId.toString());
-                                return loanOriginationApi.getApplication(applicationId, getKey);
+                                return loanOriginationApi.getApplication(applicationId, getKey)
+                                        .flatMap(dto -> kitDocumentsApi.issue(
+                                                "contract", validated.getPartyId(), applicationId, getKey).thenReturn(dto));
                             })
                             .map(dto -> mapToDetail(dto,
                                     validated.getRequestedAmount(),

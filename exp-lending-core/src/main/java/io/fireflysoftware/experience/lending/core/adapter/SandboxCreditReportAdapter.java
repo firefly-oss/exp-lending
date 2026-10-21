@@ -26,8 +26,9 @@ import reactor.core.publisher.Mono;
 
 /**
  * Local illustrative credit report. Score {@value #EXAMPLE_CREDIT_SCORE} matches
- * {@code SandboxCreditReportAdapter} in domain-lending-credit-scoring and is below the
- * sample ruleset threshold of 680. This adapter does not call a bureau.
+ * {@code SandboxCreditReportAdapter} in domain-lending-credit-scoring. The minimum
+ * score the journey supplies is {@code journey.lending.min-credit-score} from
+ * {@code BusinessParameterPort}. This adapter does not call a bureau.
  * <p>
  * The decision service applies its own sandbox report when the journey does not send a score.
  * Replace the bureau behind that service with {@code firefly.decision.credit-report}, not here.

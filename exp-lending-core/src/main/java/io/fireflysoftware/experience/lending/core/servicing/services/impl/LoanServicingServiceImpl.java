@@ -22,6 +22,9 @@ import io.fireflysoftware.experience.lending.core.ports.AccessGuard;
 import io.fireflysoftware.experience.lending.core.ports.IdentityPort;
 import io.fireflysoftware.experience.lending.core.ports.AccessPort;
 import io.fireflysoftware.experience.lending.core.ports.AccessRequest;
+import io.fireflysoftware.experience.lending.core.product.PaymentInstruction;
+import io.fireflysoftware.experience.lending.core.product.PaymentKind;
+import io.fireflysoftware.experience.lending.core.product.PaymentsPort;
 import io.fireflysoftware.experience.lending.core.servicing.commands.RequestEarlyRepaymentCommand;
 import io.fireflysoftware.experience.lending.core.servicing.commands.RequestRestructuringCommand;
 import io.fireflysoftware.experience.lending.core.servicing.ports.LoanServicingPort;
@@ -64,6 +67,7 @@ public class LoanServicingServiceImpl implements LoanServicingService {
     private final IdentityPort identityPort;
     private final AccessPort accessPort;
     private final LoanServicingPort loanServicingPort;
+    private final PaymentsPort paymentsPort;
 
     @Override
     public Mono<LoanDetailDTO> getLoan(UUID loanId) {
@@ -122,7 +126,8 @@ public class LoanServicingServiceImpl implements LoanServicingService {
 
     @Override
     public Mono<Void> requestEarlyRepayment(UUID loanId, RequestEarlyRepaymentCommand command) {
-        return update(loanId, () -> loanServicingPort.requestEarlyRepayment(loanId, command));
+        return update(loanId, () -> paymentsPort.payInstallment(new PaymentInstruction(
+                loanId, null, command.getAmount(), PaymentKind.INSTALLMENT)).then());
     }
 
     @Override

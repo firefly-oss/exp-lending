@@ -78,6 +78,8 @@ public final class AccessGuard {
             case "APPLICATION" -> UUID.fromString("10000000-0000-4000-8000-000000000004");
             case "POLICY" -> UUID.fromString("10000000-0000-4000-8000-000000000005");
             case "CLAIM" -> UUID.fromString("10000000-0000-4000-8000-000000000006");
+            case "CONTRACT" -> UUID.fromString("10000000-0000-4000-8000-000000000007");
+            case "PRODUCT" -> UUID.fromString("10000000-0000-4000-8000-000000000008");
             default -> UUID.fromString("10000000-0000-4000-8000-000000000001");
         };
     }

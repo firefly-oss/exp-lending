@@ -37,6 +37,10 @@ import io.fireflysoftware.experience.lending.core.ports.DecisionPort;
 import io.fireflysoftware.experience.lending.core.ports.DecisionRequest;
 import io.fireflysoftware.experience.lending.core.ports.JourneyStep;
 import io.fireflysoftware.experience.lending.core.ports.RiskStep;
+import io.fireflysoftware.experience.lending.core.product.BusinessParameterPort;
+import io.fireflysoftware.experience.lending.core.product.CreditProductPort;
+import io.fireflysoftware.experience.lending.core.product.CreditProductRoute;
+import io.fireflysoftware.experience.lending.core.product.LendingCatalogPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -48,7 +52,7 @@ import java.util.UUID;
 /**
  * Lending application journey. Order: access, local sandbox credit report, decision service
  * ({@code POST /api/v1/decisions}, step {@code LENDING_APPLICATION}), then loan origination.
- * A {@code DECLINE} does not call origination.
+ * A {@code DECLINE} does not call a domain. The catalog chooses the domain port for the product.
  */
 @Service
 @RequiredArgsConstructor
@@ -59,18 +63,28 @@ public class ApplicationServiceImpl implements ApplicationService {
     private final CreditReportPort creditReportPort;
     private final DecisionPort decisionPort;
     private final LoanApplicationPort loanApplicationPort;
+    private final LendingCatalogPort lendingCatalog;
+    private final CreditProductPort creditProductPort;
+    private final BusinessParameterPort businessParameters;
+
+    public static final String MIN_CREDIT_SCORE_KEY = "journey.lending.min-credit-score";
 
     @Override
     public Mono<ApplicationDetailDTO> createApplication(CreateApplicationCommand command) {
         UUID partyId = command.getPartyId() != null ? command.getPartyId() : command.getProductId();
         return AccessGuard.require(identityPort, accessPort, IdentityPort.SAMPLE_USERNAME,
                 AccessRequest.of(partyId, AccessAction.CREATE, "APPLICATION", null),
-                () -> RiskStep.afterAccess(
-                        creditReportPort,
-                        decisionPort,
-                        new CreditReportQuery(partyId, command.getProductId(), JourneyStep.LENDING_APPLICATION, Map.of()),
-                        new DecisionRequest(partyId, command.getProductId(), JourneyStep.LENDING_APPLICATION, Map.of()),
-                        () -> loanApplicationPort.createApplication(command)));
+                () -> businessParameters.findByKey(MIN_CREDIT_SCORE_KEY).flatMap(minimum ->
+                        RiskStep.afterAccess(
+                                creditReportPort,
+                                decisionPort,
+                                new CreditReportQuery(partyId, command.getProductId(), JourneyStep.LENDING_APPLICATION, Map.of()),
+                                new DecisionRequest(partyId, command.getProductId(), JourneyStep.LENDING_APPLICATION, Map.of())
+                                        .withAttribute("minCreditScore", minimum),
+                                () -> lendingCatalog.routeFor(command.getProductId()).flatMap(route ->
+                                        route.route() == CreditProductRoute.LOAN_ORIGINATION
+                                                ? loanApplicationPort.createApplication(command)
+                                                : creditProductPort.open(route, command)))));
     }
 
     @Override

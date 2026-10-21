@@ -1,0 +1,116 @@
+{
+  "defaultRoute": "LOAN_ORIGINATION",
+  "loanServicing": {
+    "RATE_CHANGE": "/api/v1/loans/{loanId}/rate",
+    "CLOSE": "/api/v1/loans/{loanId}/close",
+    "PAYMENT_HOLIDAY_GRANT": "/api/v1/loans/{loanId}/payment-holiday/grant",
+    "PAYMENT_HOLIDAY_END": "/api/v1/loans/{loanId}/payment-holiday/end",
+    "DISBURSE": "payments",
+    "PAY_INSTALLMENT": "payments",
+    "READ_CONTRACT": "contracts"
+  },
+  "products": [
+    {
+      "productId": "10000000-0000-4000-8000-000000000201",
+      "route": "MORTGAGE",
+      "createPath": "/api/v1/mortgage-agreements",
+      "idField": "mortgageAgreementId",
+      "attributes": {
+        "agreementStatus": "DRAFT",
+        "mortgageType": "CONVENTIONAL",
+        "rateType": "FIXED"
+      },
+      "operations": {
+        "STATUS": "/api/v1/mortgage-agreements/{id}/status",
+        "CLOSE": "/api/v1/mortgage-agreements/{id}/close",
+        "CANCEL": "/api/v1/mortgage-agreements/{id}/cancel"
+      }
+    },
+    {
+      "productId": "10000000-0000-4000-8000-000000000202",
+      "route": "PERSONAL_LOAN",
+      "createPath": "/api/v1/personal-loans/agreements",
+      "idField": "personalLoanAgreementId",
+      "attributes": {
+        "agreementStatus": "DRAFT",
+        "loanPurpose": "GENERAL_PURPOSE",
+        "rateType": "FIXED"
+      },
+      "operations": {
+        "UPDATE": "/api/v1/personal-loans/agreements/{id}"
+      }
+    },
+    {
+      "productId": "10000000-0000-4000-8000-000000000203",
+      "route": "ASSET_FINANCE",
+      "createPath": "/api/v1/asset-finance/agreements",
+      "idField": "assetFinanceAgreementId",
+      "attributes": {
+        "agreementStatus": "ACTIVE",
+        "financeType": "LEASING",
+        "paymentFrequency": "MONTHLY",
+        "startDate": "2026-01-01",
+        "endDate": "2029-01-01"
+      },
+      "operations": {
+        "STATUS": "/api/v1/asset-finance/agreements/{id}/status",
+        "CLOSE": "/api/v1/asset-finance/agreements/{id}/close"
+      }
+    },
+    {
+      "productId": "10000000-0000-4000-8000-000000000204",
+      "route": "ASSET_FINANCE",
+      "createPath": "/api/v1/asset-finance/agreements",
+      "idField": "assetFinanceAgreementId",
+      "attributes": {
+        "agreementStatus": "ACTIVE",
+        "financeType": "RENTING",
+        "paymentFrequency": "MONTHLY",
+        "startDate": "2026-01-01",
+        "endDate": "2027-01-01"
+      },
+      "operations": {
+        "STATUS": "/api/v1/asset-finance/agreements/{id}/status",
+        "CLOSE": "/api/v1/asset-finance/agreements/{id}/close"
+      }
+    },
+    {
+      "productId": "10000000-0000-4000-8000-000000000205",
+      "route": "SUPPLY_CHAIN_FINANCE",
+      "createPath": "/api/v1/supply-chain-finance-agreements",
+      "idField": "id",
+      "attributes": {
+        "financeType": "FACTORING",
+        "status": "DRAFT",
+        "currency": "USD",
+        "agreementNumber": "SCF-SAMPLE",
+        "loanServicingCaseId": "10000000-0000-4000-8000-000000000004",
+        "startDate": "2026-01-01"
+      },
+      "operations": {
+        "STATUS": "/api/v1/supply-chain-finance-agreements/{id}/status",
+        "CLOSE": "/api/v1/supply-chain-finance-agreements/{id}/close",
+        "CANCEL": "/api/v1/supply-chain-finance-agreements/{id}/cancel"
+      }
+    },
+    {
+      "productId": "10000000-0000-4000-8000-000000000206",
+      "route": "SUPPLY_CHAIN_FINANCE",
+      "createPath": "/api/v1/supply-chain-finance-agreements",
+      "idField": "id",
+      "attributes": {
+        "financeType": "REVERSE_FACTORING",
+        "status": "DRAFT",
+        "currency": "USD",
+        "agreementNumber": "SCF-REVERSE-SAMPLE",
+        "loanServicingCaseId": "10000000-0000-4000-8000-000000000004",
+        "startDate": "2026-01-01"
+      },
+      "operations": {
+        "STATUS": "/api/v1/supply-chain-finance-agreements/{id}/status",
+        "CLOSE": "/api/v1/supply-chain-finance-agreements/{id}/close",
+        "CANCEL": "/api/v1/supply-chain-finance-agreements/{id}/cancel"
+      }
+    }
+  ]
+}

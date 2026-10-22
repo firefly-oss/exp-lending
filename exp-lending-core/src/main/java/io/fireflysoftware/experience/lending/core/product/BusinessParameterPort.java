@@ -20,9 +20,10 @@ package io.fireflysoftware.experience.lending.core.product;
 import reactor.core.publisher.Mono;
 
 /**
- * Read side of domain-core-configuration {@code BusinessParameterPort}.
- * The HTTP adapter calls {@code GET /api/v1/parameters/by-key/{key}}.
- * A future BPM replaces the adapter. The journey does not store parameter values.
+ * Read side of domain-core-configuration business parameters.
+ * {@link io.fireflysoftware.experience.lending.core.adapter.HttpBusinessParameterAdapter}
+ * calls the generated domain SDK operation {@code GET /api/v1/parameters/by-key/{key}}.
+ * The journey does not store parameter values.
  */
 public interface BusinessParameterPort {
 

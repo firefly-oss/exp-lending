@@ -17,42 +17,49 @@
 
 package io.fireflysoftware.experience.lending.core.adapter;
 
+import io.fireflysoftware.domain.configuration.sdk.api.BusinessParametersApi;
+import io.fireflysoftware.domain.configuration.sdk.invoker.ApiClient;
 import io.fireflysoftware.experience.lending.core.product.BusinessParameterPort;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
-import java.util.Map;
-
 /**
- * Calls domain-core-configuration. This class does not copy the sandbox parameter table.
+ * Reads one business parameter through the generated domain-core-configuration SDK.
+ * The operation is {@code GET /api/v1/parameters/by-key/{key}}.
+ * This class does not call core-common-config-mgmt and does not copy the sandbox table.
  */
 @Component
 public class HttpBusinessParameterAdapter implements BusinessParameterPort {
 
-    private static final ParameterizedTypeReference<Map<String, Object>> MAP = new ParameterizedTypeReference<>() {
-    };
-
-    private final WebClient webClient;
+    private final BusinessParametersApi parameters;
 
     @Autowired
     public HttpBusinessParameterAdapter(
             @Value("${api-configuration.domain-platform.configuration.base-path:http://localhost:8094}") String basePath) {
-        this(WebClient.builder().baseUrl(basePath).build());
+        ApiClient client = new ApiClient();
+        client.setBasePath(trim(basePath));
+        this.parameters = new BusinessParametersApi(client);
     }
 
-    HttpBusinessParameterAdapter(WebClient webClient) {
-        this.webClient = webClient;
+    HttpBusinessParameterAdapter(BusinessParametersApi parameters) {
+        this.parameters = parameters;
     }
 
     @Override
     public Mono<String> findByKey(String key) {
-        return webClient.get().uri("/api/v1/parameters/by-key/{key}", key)
-                .retrieve()
-                .bodyToMono(MAP)
-                .map(body -> String.valueOf(body.get("value")));
+        return parameters.getBusinessParameterByKey(key)
+                .flatMap(parameter -> {
+                    String value = parameter == null ? null : parameter.getValue();
+                    return value == null ? Mono.empty() : Mono.just(value);
+                });
+    }
+
+    private static String trim(String url) {
+        if (url == null || url.isBlank()) {
+            throw new IllegalStateException("domain-core-configuration base path is not set");
+        }
+        return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
     }
 }

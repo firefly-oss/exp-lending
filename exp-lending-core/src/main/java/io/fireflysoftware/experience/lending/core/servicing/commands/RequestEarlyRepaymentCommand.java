@@ -22,6 +22,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 /**
  * Command to register a partial or full early repayment against an active loan.
@@ -34,4 +35,6 @@ public class RequestEarlyRepaymentCommand {
     private BigDecimal amount;
     /** PARTIAL or FULL */
     private String type;
+    /** Payment id returned by the payments domain. Not accepted from the caller. */
+    private UUID transactionId;
 }

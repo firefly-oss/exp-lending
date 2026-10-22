@@ -129,7 +129,14 @@ public class LoanServicingServiceImpl implements LoanServicingService {
         PaymentInstruction instruction = new PaymentInstruction(
                 loanId, null, command.getAmount(), PaymentKind.INSTALLMENT);
         return update(loanId, () -> paymentsPort.tryPayment(instruction)
-                .flatMap(tried -> paymentsPort.confirm(tried.paymentId(), tried.challengeValue())).then());
+                .flatMap(tried -> paymentsPort.confirm(tried.paymentId(), tried.challengeValue()))
+                .flatMap(receipt -> {
+                    if (receipt.paymentId() == null) {
+                        return Mono.error(new IllegalStateException("Payment id was not returned"));
+                    }
+                    command.setTransactionId(receipt.paymentId());
+                    return loanServicingPort.requestEarlyRepayment(loanId, command);
+                }));
     }
 
     @Override

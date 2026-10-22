@@ -41,8 +41,11 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -235,17 +238,36 @@ class LoanServicingServiceImplTest {
     // --- requestEarlyRepayment ---
 
     @Test
-    void requestEarlyRepayment_callsApplyRepayment() {
+    void requestEarlyRepayment_callsApplyRepaymentWithThePaymentId() {
         var loanId = UUID.randomUUID();
+        var paymentId = UUID.randomUUID();
         when(loanServicingApi.applyRepayment(eq(loanId.toString()), any(), any()))
                 .thenReturn(Mono.just(new Object()));
 
         var cmd = new RequestEarlyRepaymentCommand();
         cmd.setAmount(new BigDecimal("5000"));
         cmd.setType("PARTIAL");
+        cmd.setTransactionId(paymentId);
 
         StepVerifier.create(service.requestEarlyRepayment(loanId, cmd))
                 .verifyComplete();
+
+        verify(loanServicingApi).applyRepayment(eq(loanId.toString()), argThat(body ->
+                paymentId.equals(((io.fireflysoftware.domain.lending.loan.servicing.sdk.model.ApplyRepaymentCommand) body)
+                        .getTransactionId())), any());
+    }
+
+    @Test
+    void requestEarlyRepayment_rejectsAMissingPaymentId() {
+        var cmd = new RequestEarlyRepaymentCommand();
+        cmd.setAmount(new BigDecimal("5000"));
+        cmd.setType("PARTIAL");
+
+        StepVerifier.create(service.requestEarlyRepayment(UUID.randomUUID(), cmd))
+                .expectError(IllegalStateException.class)
+                .verify();
+
+        verify(loanServicingApi, never()).applyRepayment(any(), any(), any());
     }
 
     // --- simulateEarlyRepayment ---
@@ -344,6 +366,7 @@ class LoanServicingServiceImplTest {
         var restructuringId = UUID.randomUUID();
         var responseMap = Map.of(
                 "loanRestructuringId", restructuringId.toString(),
+                "status", "RESTRUCTURED",
                 "reason", "Financial hardship"
         );
 
@@ -357,7 +380,7 @@ class LoanServicingServiceImplTest {
         StepVerifier.create(service.requestRestructuring(loanId, cmd))
                 .assertNext(r -> {
                     assertThat(r.getRestructuringId()).isEqualTo(restructuringId);
-                    assertThat(r.getStatus()).isEqualTo("APPROVED");
+                    assertThat(r.getStatus()).isEqualTo("RESTRUCTURED");
                 })
                 .verifyComplete();
     }

@@ -182,11 +182,14 @@ public class DomainLoanServicingAdapter implements LoanServicingPort {
     @Override
     public Mono<Void> requestEarlyRepayment(UUID loanId, RequestEarlyRepaymentCommand command) {
         log.debug("Requesting early repayment loanId={}", loanId);
+        if (command.getTransactionId() == null) {
+            return Mono.error(new IllegalStateException("A payment id is required"));
+        }
         return loanServicingApi
                 .applyRepayment(loanId.toString(), new ApplyRepaymentCommand()
                         .paymentAmount(command.getAmount())
                         .paymentDate(LocalDate.now())
-                        .transactionId(UUID.randomUUID())
+                        .transactionId(command.getTransactionId())
                         .isPartialPayment(!"FULL".equals(command.getType())), UUID.randomUUID().toString())
                 .then();
     }
@@ -261,18 +264,27 @@ public class DomainLoanServicingAdapter implements LoanServicingPort {
         return loanServicingApi
                 .applyRestructure(loanId.toString(), new ApplyRestructureCommand().reason(command.getReason()),
                         UUID.randomUUID().toString())
-                .map(item -> {
+                .flatMap(item -> {
                     var jsonMap = objectMapper.convertValue(item, Map.class);
-                    UUID restructuringId = jsonMap.get("loanRestructuringId") != null
-                            ? UUID.fromString(jsonMap.get("loanRestructuringId").toString()) : UUID.randomUUID();
+                    Object rawId = jsonMap.get("loanRestructuringId");
+                    if (rawId == null || rawId.toString().isBlank()) {
+                        return Mono.error(new IllegalStateException("Restructuring id was not returned"));
+                    }
+                    UUID restructuringId;
+                    try {
+                        restructuringId = UUID.fromString(rawId.toString());
+                    } catch (IllegalArgumentException ex) {
+                        return Mono.error(new IllegalStateException("Restructuring id was not returned"));
+                    }
                     String reason = jsonMap.get("reason") != null
                             ? jsonMap.get("reason").toString() : command.getReason();
-                    return RestructuringDTO.builder()
+                    String status = jsonMap.get("status") == null ? null : jsonMap.get("status").toString();
+                    return Mono.just(RestructuringDTO.builder()
                             .restructuringId(restructuringId)
-                            .status("APPROVED") // MVP: domain SDK returns Object; no status field
+                            .status(status)
                             .requestedAt(LocalDate.now().atStartOfDay())
                             .newTerms(reason)
-                            .build();
+                            .build());
                 });
     }
 

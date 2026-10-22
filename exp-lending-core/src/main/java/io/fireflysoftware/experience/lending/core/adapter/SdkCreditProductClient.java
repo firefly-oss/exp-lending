@@ -65,9 +65,6 @@ public final class SdkCreditProductClient implements CreditProductPort {
         Map<String, Object> body = new java.util.LinkedHashMap<>(route.attributes());
         if (command.getPartyId() != null) {
             body.putIfAbsent("applicationId", command.getPartyId());
-        } else if (!body.containsKey("applicationId") && route.route() != CreditProductRoute.ASSET_FINANCE
-                && route.route() != CreditProductRoute.SUPPLY_CHAIN_FINANCE) {
-            body.put("applicationId", UUID.randomUUID());
         }
         if (command.getRequestedAmount() != null) {
             body.putIfAbsent("totalValue", command.getRequestedAmount());

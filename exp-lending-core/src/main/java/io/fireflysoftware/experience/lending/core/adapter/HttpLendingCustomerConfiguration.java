@@ -17,6 +17,8 @@
 
 package io.fireflysoftware.experience.lending.core.adapter;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.fireflysoftware.domain.common.contracts.sdk.api.ContractsApi;
 import io.fireflysoftware.domain.lending.assetfinance.sdk.api.AssetFinanceApi;
 import io.fireflysoftware.domain.lending.mortgage.sdk.api.MortgageAgreementsApi;
 import io.fireflysoftware.domain.lending.personalloans.sdk.api.PersonalLoansApi;
@@ -24,25 +26,20 @@ import io.fireflysoftware.domain.lending.supplychainfinance.sdk.api.SupplyChainF
 import io.fireflysoftware.experience.lending.core.product.ContractReadPort;
 import io.fireflysoftware.experience.lending.core.product.ContractView;
 import io.fireflysoftware.experience.lending.core.product.CreditProductPort;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.web.reactive.function.client.WebClient;
 
-import java.util.Map;
 import java.util.UUID;
 
 /**
  * Credit-product commands use the mortgage, personal-loan, asset-finance, and
  * supply-chain domain SDKs. Rate, holiday, and close use the loan-servicing SDK
- * from the journey service. Contract reads stay on the contracts domain.
+ * from the journey service. Contract reads use {@link ContractsApi#getContractDetail}.
  */
 @Configuration
 public class HttpLendingCustomerConfiguration {
 
-    private static final ParameterizedTypeReference<Map<String, Object>> MAP = new ParameterizedTypeReference<>() {
-    };
+    private final ObjectMapper mapper = new ObjectMapper();
 
     @Bean
     public CreditProductPort creditProductPort(MortgageAgreementsApi mortgages,
@@ -53,16 +50,16 @@ public class HttpLendingCustomerConfiguration {
     }
 
     @Bean
-    public ContractReadPort contractReadPort(
-            @Value("${api-configuration.domain-platform.common-contracts.base-path:http://localhost:8090}") String base) {
-        WebClient client = WebClient.builder().baseUrl(base).build();
-        return contractId -> client.get().uri("/api/v1/contracts/{id}", contractId)
-                .retrieve().bodyToMono(MAP)
-                .map(node -> new ContractView(
-                        uuid(node.get("contractId"), contractId),
-                        text(node.get("contractNumber")),
-                        text(node.get("contractStatus")),
-                        uuid(node.get("productId"), null)));
+    public ContractReadPort contractReadPort(ContractsApi contracts) {
+        return contractId -> contracts.getContractDetail(contractId, null)
+                .map(body -> {
+                    var node = mapper.convertValue(body, java.util.Map.class);
+                    return new ContractView(
+                            uuid(node.get("contractId"), contractId),
+                            text(node.get("contractNumber")),
+                            text(node.get("contractStatus")),
+                            uuid(node.get("productId"), null));
+                });
     }
 
     private static UUID uuid(Object value, UUID fallback) {

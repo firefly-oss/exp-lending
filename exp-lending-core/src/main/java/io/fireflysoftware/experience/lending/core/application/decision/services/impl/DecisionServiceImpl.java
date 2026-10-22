@@ -153,9 +153,11 @@ public class DecisionServiceImpl implements DecisionService {
                 .map(item -> {
                     // The domain SDK returns Object; Jackson deserializes to a LinkedHashMap.
                     var jsonMap = objectMapper.convertValue(item, java.util.Map.class);
+                    if (jsonMap.get("contractId") == null || jsonMap.get("contractId").toString().isBlank()) {
+                        throw new IllegalStateException("Contract id was not returned");
+                    }
                     return ContractDTO.builder()
-                            .contractId(jsonMap.get("contractId") != null
-                                    ? UUID.fromString(jsonMap.get("contractId").toString()) : applicationId)
+                            .contractId(UUID.fromString(jsonMap.get("contractId").toString()))
                             .applicationId(applicationId)
                             .status(jsonMap.get("contractStatus") != null
                                     ? jsonMap.get("contractStatus").toString() : null)

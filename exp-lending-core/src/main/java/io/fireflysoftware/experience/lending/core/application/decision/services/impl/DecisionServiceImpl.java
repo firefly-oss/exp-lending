@@ -18,6 +18,7 @@
 package io.fireflysoftware.experience.lending.core.application.decision.services.impl;
 
 import io.fireflysoftware.domain.common.contracts.sdk.api.ContractsApi;
+import io.fireflysoftware.domain.common.contracts.sdk.model.ChangeContractStatusCommand;
 import io.fireflysoftware.domain.lending.loan.origination.sdk.api.LoanOriginationApi;
 import io.fireflysoftware.domain.lending.loan.origination.sdk.model.ProposedOfferDTO;
 import io.fireflysoftware.domain.lending.loan.origination.sdk.model.UnderwritingDecisionDTO;
@@ -39,6 +40,7 @@ import reactor.core.publisher.Mono;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -166,19 +168,46 @@ public class DecisionServiceImpl implements DecisionService {
     @Override
     public Mono<ContractDTO> signContract(UUID applicationId, SignContractCommand command) {
         log.debug("Initiating contract signing for applicationId={}", applicationId);
-        // Step 1: Retrieve the contract associated with this application.
         return getContract(applicationId)
-                // Step 2: The domain SDK does not expose an updateContract endpoint.
-                // Contract signing is recorded by returning the contract with ACTIVE status.
-                // Full signature completion will be handled when the domain SDK surfaces
-                // a dedicated signing operation.
-                .map(contract -> ContractDTO.builder()
-                        .contractId(contract.getContractId())
-                        .applicationId(applicationId)
-                        .status("ACTIVE")
-                        .documentUrl(contract.getDocumentUrl())
-                        .signedAt(LocalDateTime.now())
-                        .build());
+                .flatMap(contract -> {
+                    UUID contractId = contract.getContractId();
+                    ChangeContractStatusCommand change = new ChangeContractStatusCommand()
+                            .contractId(contractId)
+                            .status(ChangeContractStatusCommand.StatusEnum.ACTIVE)
+                            .reason("signed");
+                    return contractsApi.changeStatus(contractId, change, UUID.randomUUID().toString())
+                            .then(contractsApi.getStatus(contractId, UUID.randomUUID().toString()))
+                            .map(statusBody -> persistedContract(applicationId, contractId, contract.getDocumentUrl(), statusBody));
+                });
+    }
+
+    private ContractDTO persistedContract(UUID applicationId, UUID contractId, String documentUrl, Object statusBody) {
+        Map<?, ?> row = objectMapper.convertValue(statusBody, Map.class);
+        Object code = row.get("statusCode");
+        if (code == null) {
+            code = row.get("contractStatus");
+        }
+        if (code == null || String.valueOf(code).isBlank()) {
+            throw new IllegalStateException("DOMAIN_RESPONSE_UNREADABLE");
+        }
+        return ContractDTO.builder()
+                .contractId(contractId)
+                .applicationId(applicationId)
+                .status(String.valueOf(code))
+                .documentUrl(documentUrl)
+                .signedAt(startedAt(row.get("statusStartDate")))
+                .build();
+    }
+
+    private static LocalDateTime startedAt(Object value) {
+        if (!(value instanceof String text) || text.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDateTime.parse(text);
+        } catch (java.time.format.DateTimeParseException ex) {
+            return null;
+        }
     }
 
     // -------------------------------------------------------------------------

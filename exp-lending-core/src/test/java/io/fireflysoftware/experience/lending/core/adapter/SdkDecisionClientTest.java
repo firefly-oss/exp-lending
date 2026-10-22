@@ -17,38 +17,36 @@
 
 package io.fireflysoftware.experience.lending.core.adapter;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import io.fireflysoftware.domain.lending.creditscoring.sdk.api.DecisionApi;
+import io.fireflysoftware.domain.lending.creditscoring.sdk.model.DecisionResponse;
 import io.fireflysoftware.experience.lending.core.ports.DecisionOutcome;
 import io.fireflysoftware.experience.lending.core.ports.DecisionRequest;
 import io.fireflysoftware.experience.lending.core.ports.JourneyStep;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.reactive.function.client.ClientResponse;
-import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
-class HttpDecisionClientTest {
+class SdkDecisionClientTest {
 
     @Test
-    void decide_postsJourneyContract() {
+    void decide_usesEvaluateDecision() {
         UUID partyId = UUID.randomUUID();
         UUID productId = UUID.randomUUID();
-        WebClient client = WebClient.builder().exchangeFunction(request -> {
-            assertThat(request.method().name()).isEqualTo("POST");
-            assertThat(request.url().getPath()).isEqualTo("/api/v1/decisions");
-            return Mono.just(ClientResponse.create(HttpStatus.OK)
-                    .header("Content-Type", "application/json")
-                    .body("{\"outcome\":\"REFER\",\"reasonCodes\":[\"CREDIT_SCORE_BELOW_THRESHOLD\"]}")
-                    .build());
-        }).build();
+        DecisionApi decisions = mock(DecisionApi.class);
+        when(decisions.evaluateDecision(any())).thenReturn(Mono.just(new DecisionResponse()
+                .outcome(DecisionResponse.OutcomeEnum.REFER)
+                .reasonCodes(List.of("CREDIT_SCORE_BELOW_THRESHOLD"))));
 
-        StepVerifier.create(new DomainDecisionConfiguration.HttpDecisionClient(client).decide(
+        StepVerifier.create(new DomainDecisionConfiguration.SdkDecisionClient(decisions).decide(
                         new DecisionRequest(partyId, productId, JourneyStep.LENDING_APPLICATION, Map.of())))
                 .assertNext(result -> {
                     assertThat(result.outcome()).isEqualTo(DecisionOutcome.REFER);

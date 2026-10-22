@@ -6,7 +6,7 @@
     <parent>
         <groupId>io.fireflysoftware</groupId>
         <artifactId>exp-lending</artifactId>
-        <version>26.10.5</version>
+        <version>26.10.6</version>
     </parent>
 
     <artifactId>exp-lending-core</artifactId>
@@ -41,12 +41,12 @@
         <dependency>
             <groupId>io.fireflysoftware</groupId>
             <artifactId>domain-core-security-center-sdk</artifactId>
-            <version>26.10.5</version>
+            <version>26.10.6</version>
         </dependency>
         <dependency>
             <groupId>io.fireflysoftware</groupId>
             <artifactId>domain-core-configuration-sdk</artifactId>
-            <version>26.10.5</version>
+            <version>26.10.6</version>
         </dependency>
         <dependency>
             <groupId>io.fireflysoftware</groupId>

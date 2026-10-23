@@ -77,7 +77,8 @@ public class HttpPaymentsAdapter implements PaymentsPort {
                 ? instruction.loanId().toString()
                 : instruction.installmentId().toString();
         MovementCommand command = new MovementCommand()
-                .scheme(instruction.path() == PaymentPath.OUTBOUND ? OUTBOUND_SCHEME : INTERNAL_SCHEME)
+                .scheme(MovementCommand.SchemeEnum.fromValue(
+                        instruction.path() == PaymentPath.OUTBOUND ? OUTBOUND_SCHEME : INTERNAL_SCHEME))
                 .idempotencyKey(instruction.loanId() + ":" + instruction.kind().name() + ":" + instruction.amount())
                 .amount(instruction.amount())
                 .currency("EUR")

@@ -32,6 +32,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -42,7 +43,7 @@ class SdkDecisionClientTest {
         UUID partyId = UUID.randomUUID();
         UUID productId = UUID.randomUUID();
         DecisionApi decisions = mock(DecisionApi.class);
-        when(decisions.evaluateDecision(any())).thenReturn(Mono.just(new DecisionResponse()
+        when(decisions.evaluateDecision(any(), isNull())).thenReturn(Mono.just(new DecisionResponse()
                 .outcome(DecisionResponse.OutcomeEnum.REFER)
                 .reasonCodes(List.of("CREDIT_SCORE_BELOW_THRESHOLD"))));
 

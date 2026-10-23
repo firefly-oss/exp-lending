@@ -42,13 +42,18 @@ class HttpPaymentsAdapterTest {
         UUID paymentId = UUID.randomUUID();
         UUID challengeId = UUID.randomUUID();
         String challengeValue = "9f3a1c7e";
+        AtomicReference<String> tryBody = new AtomicReference<>();
         AtomicReference<String> confirmBody = new AtomicReference<>();
         WebClient client = WebClient.builder().exchangeFunction(request -> {
             String path = request.url().getPath();
             if (path.equals("/api/v1/payments/tries")) {
-                return MonoResponse.created(
-                        "{\"paymentId\":\"" + paymentId + "\",\"challengeId\":\"" + challengeId
-                                + "\",\"challengeValue\":\"" + challengeValue + "\",\"amount\":25}");
+                MockClientHttpRequest mock = new MockClientHttpRequest(request.method(), request.url());
+                return request.writeTo(mock, ExchangeStrategies.withDefaults()).then(reactor.core.publisher.Mono.defer(() -> {
+                    tryBody.set(mock.getBodyAsString().block());
+                    return MonoResponse.created(
+                            "{\"paymentId\":\"" + paymentId + "\",\"challengeId\":\"" + challengeId
+                                    + "\",\"challengeValue\":\"" + challengeValue + "\",\"amount\":25}");
+                }));
             }
             if (path.equals("/api/v1/payments/" + paymentId + "/confirmations")) {
                 MockClientHttpRequest mock = new MockClientHttpRequest(request.method(), request.url());
@@ -69,6 +74,7 @@ class HttpPaymentsAdapterTest {
         assertThat(tried.challengeId()).isEqualTo(challengeId);
         assertThat(tried.challengeValue()).isEqualTo(challengeValue);
         assertThat(tried.challengeValue()).isNotEqualTo("sandbox");
+        assertThat(tryBody.get()).contains("\"scheme\":\"DOMESTIC_OUTBOUND\"");
 
         StepVerifier.create(adapter.confirm(paymentId, tried.challengeValue()))
                 .assertNext(receipt -> {

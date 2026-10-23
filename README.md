@@ -27,6 +27,10 @@ Developed by the Firefly Software Foundation. [dev@fireflysoftware.io](mailto:de
 - [Running Locally](#running-locally)
 - [Testing](#testing)
 
+## Simulation availability
+
+The two simulation routes currently return `503 LENDING_TERMS_UNAVAILABLE` after existing validation. They do not register administrative pricing or persist an unverified calculation. Eligibility remains a separate operation. Exact, authorized product terms and currency-policy references are required before numerical simulations can be enabled. See [Simulation availability](docs/simulation-availability.md) for the response contract and integration dependency.
+
 ## Overview
 
 `exp-lending` is the experience-layer service that powers all lending-related screens across the digital channel. It covers the full credit lifecycle — from the initial product simulation and eligibility check, through multi-step application management, underwriting decision retrieval, offer selection, SCA-protected contract signing, post-disbursement loan servicing, and asset finance agreement management, down to collections case handling.
@@ -102,8 +106,8 @@ exp-lending  (port 8102)
 
 | Method | Path | Description | Response |
 |--------|------|-------------|----------|
-| `POST` | `/api/v1/experience/lending/simulations` | Compute a loan simulation for a given amount, term, and product type | `201 Created` |
-| `GET` | `/api/v1/experience/lending/simulations/{id}` | Retrieve a previously created loan simulation by its identifier | `200 OK` |
+| `POST` | `/api/v1/experience/lending/simulations` | Requires verified owner terms; performs no pricing write | `503 LENDING_TERMS_UNAVAILABLE` |
+| `POST` | `/api/v1/experience/lending/simulations/configure` | Retains input validation; performs no calculation or persistence | `400 Bad Request` or `503 LENDING_TERMS_UNAVAILABLE` |
 | `POST` | `/api/v1/experience/lending/eligibility` | Evaluate whether a party is eligible for a given product and requested amount | `200 OK` |
 
 ### Application Lifecycle
